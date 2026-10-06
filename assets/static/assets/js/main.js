@@ -244,8 +244,12 @@
     
     /**
      * Show loading state when form is submitted
+     * DISABLED - causing issues with redirects
      */
     function initFormLoadingState() {
+        // Disabled to prevent page freeze issues after form submission
+        return;
+        
         const forms = document.querySelectorAll('form');
         
         forms.forEach(form => {
@@ -358,7 +362,7 @@
         initConfirmationDialogs();
         initFormValidation();
         initFileUpload();
-        initTableSorting();
+        // initTableSorting(); // Disabled - causing performance issues on large tables
         initFormLoadingState();
         initAutoDismissAlerts();
         initWarrantyHighlighting();

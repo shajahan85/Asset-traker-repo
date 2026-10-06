@@ -1,0 +1,190 @@
+=====================================
+ASSET TRACKER - LINUX QUICK DEPLOYMENT
+Ubuntu 20.04/22.04 LTS
+=====================================
+
+ESTIMATED TIME: 2 hours total
+
+REQUIREMENTS:
+- Ubuntu Server 20.04 or 22.04 LTS
+- Root or sudo access
+- Internet connection
+- 2 GB RAM minimum (4 GB recommended)
+- 10 GB disk space
+
+=====================================
+QUICK COMMANDS (Copy-Paste)
+=====================================
+
+# 1. UPDATE SYSTEM (5 min)
+sudo apt update && sudo apt upgrade -y
+
+# 2. INSTALL SOFTWARE (10 min)
+sudo apt install -y python3 python3-pip python3-venv nginx postgresql postgresql-contrib redis-server git
+
+# 3. SETUP DATABASE (10 min)
+sudo -u postgres psql << EOF
+CREATE DATABASE asset_tracker;
+CREATE USER asset_tracker_user WITH PASSWORD 'ChangeThisPassword123!';
+GRANT ALL PRIVILEGES ON DATABASE asset_tracker TO asset_tracker_user;
+ALTER ROLE asset_tracker_user SET client_encoding TO 'utf8';
+ALTER ROLE asset_tracker_user SET default_transaction_isolation TO 'read committed';
+ALTER ROLE asset_tracker_user SET timezone TO 'UTC';
+\q
+EOF
+
+# 4. CREATE APPLICATION USER (5 min)
+sudo adduser --system --group --home /opt/assettracker assettracker
+sudo mkdir -p /opt/assettracker
+sudo chown -R assettracker:assettracker /opt/assettracker
+
+# 5. UPLOAD YOUR FILES (10 min)
+# From Windows: Use WinSCP to upload to /opt/assettracker/
+# Or use SCP: scp -r "D:\Asset tracker\*" user@server:/opt/assettracker/
+# Then: sudo chown -R assettracker:assettracker /opt/assettracker
+
+# 6. SETUP PYTHON (15 min)
+sudo su - assettracker
+cd /opt/assettracker
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install gunicorn
+exit
+
+# 7. CREATE .ENV FILE (10 min)
+sudo nano /opt/assettracker/.env
+# Copy from .env.example, update these:
+# DEBUG=False
+# SECRET_KEY=generate-new-secret-key
+# ALLOWED_HOSTS=your-server-ip
+# DATABASE settings
+# Save: Ctrl+X, Y, Enter
+
+sudo chown assettracker:assettracker /opt/assettracker/.env
+sudo chmod 600 /opt/assettracker/.env
+
+# 8. RUN DJANGO SETUP (10 min)
+sudo su - assettracker
+cd /opt/assettracker
+source venv/bin/activate
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py createsuperuser
+exit
+
+# 9. CREATE GUNICORN SERVICE (15 min)
+sudo nano /etc/systemd/system/assettracker.service
+# Paste the service file content (see full guide)
+# Save: Ctrl+X, Y, Enter
+
+sudo systemctl daemon-reload
+sudo systemctl enable assettracker
+sudo systemctl start assettracker
+sudo systemctl status assettracker
+
+# 10. CONFIGURE NGINX (15 min)
+sudo nano /etc/nginx/sites-available/assettracker
+# Paste Nginx config (see full guide)
+# Update server_name with your IP/domain
+# Save: Ctrl+X, Y, Enter
+
+sudo ln -s /etc/nginx/sites-available/assettracker /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx
+sudo systemctl enable nginx
+
+# 11. CONFIGURE FIREWALL (5 min)
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+
+# 12. TEST
+curl http://localhost
+# Open browser: http://YOUR_SERVER_IP/
+
+# 13. SETUP CELERY (Optional, 15 min)
+# See full guide for Celery service files
+
+=====================================
+USEFUL COMMANDS
+=====================================
+
+# Restart application
+sudo systemctl restart assettracker
+
+# View logs
+sudo journalctl -u assettracker -f
+
+# Restart Nginx
+sudo systemctl restart nginx
+
+# Run Django commands
+sudo su - assettracker
+cd /opt/assettracker
+source venv/bin/activate
+python manage.py <command>
+exit
+
+# Backup database
+sudo -u postgres pg_dump asset_tracker > backup.sql
+
+=====================================
+TROUBLESHOOTING
+=====================================
+
+# Application not starting?
+sudo systemctl status assettracker
+sudo journalctl -u assettracker -n 50
+
+# Static files not loading?
+sudo su - assettracker
+cd /opt/assettracker
+source venv/bin/activate
+python manage.py collectstatic --noinput
+exit
+sudo systemctl restart nginx
+
+# Database connection error?
+psql -U asset_tracker_user -d asset_tracker -h localhost -W
+
+# Check all services
+sudo systemctl status assettracker
+sudo systemctl status nginx
+sudo systemctl status postgresql
+sudo systemctl status redis
+
+=====================================
+FILES TO DOWNLOAD/PREPARE
+=====================================
+
+1. Application files from D:\Asset tracker\
+2. .env file with production settings
+3. Database credentials
+4. Domain name (optional)
+5. SSL certificate (optional, can get free from Let's Encrypt)
+
+=====================================
+ADVANTAGES OVER IIS
+=====================================
+
+✅ 10x easier setup
+✅ Better performance
+✅ Clearer error messages
+✅ Free (no Windows license)
+✅ More documentation
+✅ Standard Django deployment
+✅ Easier updates
+✅ Better for scaling
+
+=====================================
+NEED FULL GUIDE?
+=====================================
+
+See: LINUX_DEPLOYMENT_GUIDE.md
+Complete step-by-step with explanations
+
+=====================================

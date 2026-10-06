@@ -1,0 +1,19 @@
+========================================
+FIXED - Added missing import
+========================================
+
+The original file was missing this import:
+- AssetIPAddress
+- inlineformset_factory
+
+I've added them back.
+
+NOW DEPLOY THIS FILE:
+
+cd /var/www/asset_tracker/
+cp /path/to/ORIGINAL_WORKING_FILE/asset_forms.py /var/www/asset_tracker/assets/forms/
+sudo systemctl restart asset_tracker
+
+This should fix the internal server error.
+
+========================================

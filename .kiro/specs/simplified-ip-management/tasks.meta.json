@@ -1,0 +1,330 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create schema migration to add ip_label field to AssetIPAddress model": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045410467
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045425322
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045550930
+      }
+    ],
+    "1.2 Create data migration to populate ip_label for existing secondary IPs": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045410919
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045556665
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045854039
+      }
+    ],
+    "2.1 Add ip_label validation rules to AssetIPAddress.clean() method": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045410976
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045562681
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045854866
+      }
+    ],
+    "3.1 Implement AdditionalIPForm ModelForm class": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411041
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045867640
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046066274
+      }
+    ],
+    "3.2 Implement AdditionalIPForm validation logic": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411105
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046075157
+      }
+    ],
+    "3.3 Implement AdditionalIPForm save method": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411234
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046075954
+      }
+    ],
+    "3.4 Create AdditionalIPFormSet using inlineformset_factory": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411286
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046101726
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046276523
+      }
+    ],
+    "4.1 Modify AssetForm primary IP field labels and structure": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411331
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046102744
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046277572
+      }
+    ],
+    "4.2 Simplify AssetForm save() method to handle only primary IP": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411373
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046297966
+      }
+    ],
+    "5. Checkpoint - Ensure model and form tests pass": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411416
+      },
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046309536
+      }
+    ],
+    "6.1 Modify AssetCreateView to include AdditionalIPFormSet in context": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411515
+      }
+    ],
+    "6.2 Implement formset validation in AssetCreateView.form_valid()": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411573
+      }
+    ],
+    "7.1 Modify AssetUpdateView to include AdditionalIPFormSet with existing data": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411647
+      }
+    ],
+    "7.2 Implement formset saving in AssetUpdateView.form_valid()": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411698
+      }
+    ],
+    "8.1 Update asset_form.html template with simplified primary IP section": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411739
+      }
+    ],
+    "9.1 Add additional IPs section to asset_form.html template": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411778
+      }
+    ],
+    "9.2 Create template loop for rendering additional IP forms": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411881
+      }
+    ],
+    "10.1 Add JavaScript to toggle primary IP field visibility": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411920
+      }
+    ],
+    "10.2 Add JavaScript function to toggle additional IP field visibility": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045411965
+      }
+    ],
+    "11.1 Implement \"Add Additional IP\" button functionality": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412005
+      }
+    ],
+    "11.2 Implement \"Remove\" button functionality": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412045
+      }
+    ],
+    "11.3 Implement form re-indexing function": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412123
+      }
+    ],
+    "12. Checkpoint - Test form functionality manually": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412200
+      }
+    ],
+    "13.1 Modify asset detail template to display primary IP with simplified label": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412241
+      }
+    ],
+    "13.2 Add additional IPs section to asset detail template": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412280
+      }
+    ],
+    "14.1 Simplify IP address column in asset list table": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412323
+      }
+    ],
+    "15.1 Implement formset-level validation to prevent duplicate IPs on same asset": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412361
+      }
+    ],
+    "16.1 Ensure IP pool correctly tracks additional managed IPs": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412404
+      }
+    ],
+    "17.1 Ensure created_at timestamps are set correctly": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412446
+      }
+    ],
+    "17.2 Verify freed_date tracking for managed IPs": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412485
+      }
+    ],
+    "18. Final checkpoint and testing": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045412564
+      }
+    ],
+    "1. Create database migrations for ip_label field": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045854083
+      }
+    ],
+    "2. Update AssetIPAddress model validation": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784045854922
+      }
+    ],
+    "3. Create AdditionalIPForm for formset entries": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046276590
+      }
+    ],
+    "4. Update AssetForm for simplified primary IP": [
+      {
+        "executionId": "e22db285-bcbd-47bc-895d-f0f07075ffe9",
+        "chatSessionId": "sess_7733a5e6-6cce-40fa-9169-f5ac48dac97d",
+        "timestamp": 1784046298073
+      }
+    ]
+  }
+}

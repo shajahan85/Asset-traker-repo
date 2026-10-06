@@ -1,0 +1,105 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Hyper-V Virtual Machines - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>Hyper-V Virtual Machines</h1>
+    <div>
+        <a href="{% url 'export_hyperv_vms' %}" class="btn btn-success me-2">Export to Excel</a>
+        <a href="{% url 'hyperv_vm_create' %}" class="btn btn-primary">Add New VM</a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Search and Filter Controls -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">Search by Name</label>
+                <input type="text" class="form-control" id="search" name="search" value="{{ search_query }}" placeholder="Enter VM name">
+            </div>
+            <div class="col-md-2">
+                <label for="ip" class="form-label">Filter by IP</label>
+                <input type="text" class="form-control" id="ip" name="ip" value="{{ filter_ip }}" placeholder="e.g., 192.168">
+            </div>
+            <div class="col-md-2">
+                <label for="host" class="form-label">Filter by Host</label>
+                <select class="form-control" id="host" name="host">
+                    <option value="">All Hosts</option>
+                    {% for host in available_hosts %}
+                        <option value="{{ host.serial_number }}" {% if filter_host == host.serial_number|stringformat:"s" %}selected{% endif %}>
+                            {{ host.asset_tag }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="range" class="form-label">Filter by IP Range</label>
+                <select class="form-control" id="range" name="range">
+                    <option value="">All Ranges</option>
+                    {% for range in available_ranges %}
+                        <option value="{{ range.range_pattern }}" {% if filter_range == range.range_pattern %}selected{% endif %}>
+                            {{ range.range_pattern }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">Filter</button>
+                <a href="{% url 'hyperv_vm_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<p class="text-muted">Total VMs: {{ vm_count }}</p>
+
+{% if vms %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>VM Name</th>
+            <th>Host Machine</th>
+            <th>Host IP</th>
+            <th>VM IP Address</th>
+            <th>Power Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for vm in vms %}
+        <tr>
+            <td><a href="{% url 'hyperv_vm_detail' vm.pk %}">{{ vm.name }}</a></td>
+            <td>{{ vm.host_machine.asset_tag }}</td>
+            <td>{{ vm.get_host_ip }}</td>
+            <td>{{ vm.get_display_ip }}</td>
+            <td>
+                {% if vm.power_status == 'on' %}
+                    <span class="badge bg-success">On</span>
+                {% else %}
+                    <span class="badge bg-secondary">Off</span>
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'hyperv_vm_update' vm.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{% url 'hyperv_vm_delete' vm.pk %}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">
+    <p>No virtual machines found. <a href="{% url 'hyperv_vm_create' %}">Add your first VM</a></p>
+</div>
+{% endif %}
+{% endblock %}

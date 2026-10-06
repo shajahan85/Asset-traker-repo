@@ -1,0 +1,39 @@
+# EMERGENCY DEBUG PATCH FOR views.py
+# Add this to AssetUpdateView to see why form won't submit
+
+# Find the form_valid method (around line 319) and ADD THIS AT THE VERY TOP:
+
+def form_valid(self, form):
+    """Process form submission using AssetService.update_asset() and handle formset."""
+    # === EMERGENCY DEBUG START ===
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error("="*80)
+    logger.error(f"FORM_VALID CALLED FOR: {self.get_object().asset_tag}")
+    logger.error(f"User: {self.request.user.username}")
+    logger.error(f"POST data keys: {list(self.request.POST.keys())}")
+    logger.error("="*80)
+    # === EMERGENCY DEBUG END ===
+    
+    from .forms.asset_forms import AdditionalIPFormSet, AccessoryFormSet
+    from django.db import transaction
+    from django.utils import timezone
+    from django.contrib.auth import authenticate
+    
+    # ... rest of existing code ...
+
+
+# ALSO ADD THIS to the POST method to catch if form_valid is even being reached:
+
+def post(self, request, *args, **kwargs):
+    """Handle POST requests."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    asset = self.get_object()
+    logger.error("="*80)
+    logger.error(f"POST REQUEST RECEIVED FOR: {asset.asset_tag}")
+    logger.error(f"Form is_valid will be checked now...")
+    logger.error("="*80)
+    
+    return super().post(request, *args, **kwargs)

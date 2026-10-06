@@ -1,0 +1,17 @@
+# Systemd socket file for Asset Tracker Gunicorn
+# Place this file at: /etc/systemd/system/asset_tracker.socket
+
+[Unit]
+Description=Asset Tracker Gunicorn socket
+
+[Socket]
+ListenStream=/run/asset_tracker.sock
+# Our service won't need permissions for the socket, since it
+# inherits the file descriptor by socket activation
+# only the nginx daemon will need access to the socket
+SocketUser=www-data
+# Optionally restrict the socket permissions even more.
+# SocketMode=600
+
+[Install]
+WantedBy=sockets.target

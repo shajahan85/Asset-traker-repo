@@ -1,9 +1,63 @@
 {% extends "assets/base.html" %}
+{% load static %}
 
 {% block title %}IP Addresses - Asset Tracker{% endblock %}
 
 {% block extra_css %}
 <style>
+/* Quick IP Series Filter Buttons */
+.ip-series-filter {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.ip-series-filter-label {
+    font-weight: 600;
+    color: #333;
+    margin-right: 10px;
+}
+
+.ip-series-btn {
+    padding: 8px 16px;
+    border: 2px solid #007bff;
+    background-color: white;
+    color: #007bff;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.ip-series-btn:hover {
+    background-color: #007bff;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+
+.ip-series-btn.active {
+    background-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.4);
+}
+
+.ip-series-btn.clear-filter {
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.ip-series-btn.clear-filter:hover {
+    background-color: #6c757d;
+    color: white;
+}
+
 .ip-range-section {
     margin-bottom: 2rem;
 }
@@ -36,9 +90,46 @@
     color: #721c24;
 }
 
+.ip-item.vm {
+    background-color: #cfe2ff;
+    border: 1px solid #0d6efd;
+    color: #084298;
+}
+
+.ip-item.guest {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+}
+
+.ip-item.common-vm-range {
+    border-width: 2px;
+    font-weight: 500;
+}
+
+.ip-item.rare-vm-range {
+    opacity: 0.85;
+}
+
 .ip-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.vm-relationship {
+    margin-left: 20px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.vm-relationship a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.vm-relationship a:hover {
+    text-decoration: underline;
 }
 
 .ip-item.hidden {
@@ -114,12 +205,92 @@
 .ip-range-group.hidden {
     display: none;
 }
+
+.guest-indicator {
+    display: block;
+    font-size: 0.75rem;
+    color: #856404;
+    margin-top: 2px;
+}
+
+.assign-guest-btn,
+.release-guest-btn {
+    display: block;
+    margin-top: 5px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.assign-guest-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.assign-guest-btn:hover {
+    background-color: #218838;
+}
+
+.release-guest-btn {
+    background-color: #ffc107;
+    color: #856404;
+}
+
+.release-guest-btn:hover {
+    background-color: #e0a800;
+}
+
+.mark-occupied-btn {
+    display: none;
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.ip-item:hover .mark-occupied-btn {
+    display: inline-block;
+}
+
+.release-occupied-btn {
+    display: block;
+    margin-top: 5px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.release-occupied-btn:hover {
+    background-color: #218838;
+}
+
+.ip-item {
+    position: relative;
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="header-actions">
     <h1>IP Addresses</h1>
+    <button id="addVMButton" class="btn btn-primary">Add VM</button>
+    <button id="assignGuestIPButton" class="btn btn-warning">Assign Guest IP</button>
     <a href="{% url 'export_free_ips' %}" class="btn btn-success">Export Free IPs to Excel</a>
 </div>
 
@@ -130,6 +301,17 @@
         </div>
     {% endfor %}
 {% endif %}
+
+<!-- Quick IP Series Filter -->
+<div class="ip-series-filter">
+    <span class="ip-series-filter-label">Quick Filter:</span>
+    <button class="ip-series-btn" data-series="192.168.10">192.168.10.x</button>
+    <button class="ip-series-btn" data-series="192.168.70">192.168.70.x</button>
+    <button class="ip-series-btn" data-series="192.168.11">192.168.11.x</button>
+    <button class="ip-series-btn" data-series="192.168.50">192.168.50.x</button>
+    <button class="ip-series-btn" data-series="other">Other Series</button>
+    <button class="ip-series-btn clear-filter" data-series="all">Show All</button>
+</div>
 
 <div class="search-box">
     <input type="text" id="ipSearchInput" placeholder="Search by IP address or assigned person name..." autocomplete="off">
@@ -146,31 +328,68 @@
         <span class="legend-box occupied"></span>
         <span>Occupied IP</span>
     </div>
+    <div class="legend-item">
+        <span class="legend-box" style="background-color: #cfe2ff; border: 1px solid #0d6efd;"></span>
+        <span>VM IP</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-box" style="background-color: #fff3cd; border: 1px solid #ffc107;"></span>
+        <span>Guest IP</span>
+    </div>
 </div>
 
 {% if ip_ranges %}
-    {% for range_pattern, ips in ip_ranges.items %}
+    {% for range_pattern, ip_data_list in ip_ranges.items %}
     <div class="ip-range-group">
         <h3>{{ range_pattern }} 
             <span class="ip-count">
-                ({{ ips|length }} total)
+                ({{ ip_data_list|length }} total)
             </span>
         </h3>
         <div class="ip-list">
-            {% for ip in ips %}
-            <div class="ip-item {% if ip.occupant_type == 'free' %}free{% else %}occupied{% endif %}" 
-                 title="{% if ip.occupant_type == 'network_device' %}Network Device: {{ ip.occupant_name }}{% elif ip.occupant_type == 'asset' %}Asset - Assigned to: {{ ip.occupant_name }}{% else %}Free{% if ip.freed_date %} (Freed: {{ ip.freed_date|date:'Y-m-d' }}){% endif %}{% endif %}"
+            {% for ip_data in ip_data_list %}
+            {% with ip=ip_data.ip %}
+            <div class="ip-item {% if ip.occupant_type == 'guest' %}guest{% elif ip.occupant_type == 'vm' %}vm{% elif ip.occupant_type == 'free' %}free{% else %}occupied{% endif %}{% if ip_data.is_common_vm_range %} common-vm-range{% elif ip_data.is_rare_vm_range %} rare-vm-range{% endif %}" 
+                 title="{% if ip.occupant_type == 'guest' %}Guest: {{ ip.occupant_name }}{% elif ip.occupant_type == 'vm' %}VM: {{ ip.occupant_name }}{% elif ip.occupant_type == 'network_device' %}Network Device: {{ ip.occupant_name }}{% elif ip.occupant_type == 'testing_device' %}Testing Device: {{ ip.occupant_name }}{% elif ip.occupant_type == 'asset' %}Asset - Assigned to: {{ ip.occupant_name }}{% else %}Free{% if ip.freed_date %} (Freed: {{ ip.freed_date|date:'Y-m-d' }}){% endif %}{% endif %}"
                  data-occupant-type="{{ ip.occupant_type }}"
-                 data-occupant-name="{{ ip.occupant_name|default:'' }}">
+                 data-occupant-name="{{ ip.occupant_name|default:'' }}"
+                 data-ip-id="{{ ip.id }}"
+                 data-guest-name="{{ ip.guest_name|default:'' }}">
                 {{ ip.address }}
-                {% if ip.occupant_type == 'network_device' %}
+                {% if ip.occupant_type == 'guest' %}
+                    <small class="guest-indicator">👤 Guest: {{ ip.guest_name }}</small>
+                    <button class="release-guest-btn" data-ip-id="{{ ip.id }}" data-ip-address="{{ ip.address }}" data-guest-name="{{ ip.guest_name }}">Release</button>
+                {% elif ip.occupant_type == 'vm' %}
+                    {% if ip_data.vm and ip_data.vm.pk %}
+                        <small class="freed-date">🖥️ <a href="{% url 'hyperv_vm_detail' ip_data.vm.pk %}">{{ ip.occupant_name }}</a></small>
+                        <small class="freed-date">Host: {{ ip_data.vm.get_host_ip }}</small>
+                    {% else %}
+                        <small class="freed-date">🖥️ {{ ip.occupant_name }}</small>
+                    {% endif %}
+                {% elif ip.occupant_type == 'network_device' %}
                     <small class="freed-date">🎥 {{ ip.occupant_name }}</small>
+                {% elif ip.occupant_type == 'testing_device' %}
+                    <small class="freed-date">📱 {{ ip.occupant_name }}</small>
                 {% elif ip.occupant_type == 'asset' %}
-                    <small class="freed-date">{{ ip.occupant_name }}</small>
+                    <small class="freed-date">{{ ip.occupant_name }}{% if ip.ip_usage_label %} - {{ ip.ip_usage_label }}{% endif %}</small>
+                    {% if ip_data.hosted_vms %}
+                        {% for vm in ip_data.hosted_vms %}
+                            <small class="freed-date">🖥️ {{ vm.get_display_ip }}</small>
+                        {% endfor %}
+                    {% endif %}
+                {% elif ip.occupant_type == 'manually_occupied' %}
+                    <small class="freed-date">🔒 {{ ip.occupant_name }}</small>
+                    {% if ip.occupied_particulars %}<small class="freed-date">{{ ip.occupied_particulars }}</small>{% endif %}
+                    {% if ip.occupied_date %}<small class="freed-date">{{ ip.occupied_date|date:"Y-m-d" }}</small>{% endif %}
+                    <button class="release-occupied-btn" data-ip-address="{{ ip.address }}">Release</button>
                 {% elif ip.freed_date %}
                     <small class="freed-date">Freed: {{ ip.freed_date|date:"Y-m-d" }}</small>
                 {% endif %}
+                {% if ip.occupant_type == 'free' %}
+                    <button class="mark-occupied-btn" data-ip-address="{{ ip.address }}">Mark Occupied</button>
+                {% endif %}
             </div>
+            {% endwith %}
             {% endfor %}
         </div>
     </div>
@@ -183,6 +402,308 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Guest IP Assignment Modal -->
+<div id="guestAssignmentModal" class="modal-overlay">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign IP to Guest</h3>
+                <button type="button" class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="guestAssignmentForm">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="guestIPAddress" class="form-label">IP Address <span class="required">*</span></label>
+                        <input type="text" class="form-control" id="guestIPAddress" name="ip_address" required placeholder="e.g., 192.168.1.100">
+                        <div class="error-message"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="guestName" class="form-label">Guest Name <span class="required">*</span></label>
+                        <input type="text" class="form-control" id="guestName" name="guest_name" required maxlength="150" placeholder="Enter guest's name">
+                        <div class="error-message"></div>
+                    </div>
+                    <div id="assignFormErrors" class="alert-error"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                <button type="button" id="confirmAssignButton" class="btn btn-primary">
+                    <span class="spinner-border"></span>
+                    Assign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VM Creation Modal -->
+<div id="vmCreationModal" class="modal-overlay">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Create Virtual Machine</h3>
+                <button type="button" class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="vmCreationForm">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="vmIP" class="form-label">VM IP Address <span class="required">*</span></label>
+                        <input type="text" class="form-control" id="vmIP" name="vm_ip" required placeholder="e.g., 192.168.1.100">
+                        <div class="error-message"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="baseMachineIP" class="form-label">Base Machine IP <span class="required">*</span></label>
+                        <input type="text" class="form-control" id="baseMachineIP" name="base_machine_ip" required placeholder="e.g., 192.168.1.50">
+                        <div class="error-message"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vmName" class="form-label">VM Name (optional)</label>
+                        <input type="text" class="form-control" id="vmName" name="vm_name" placeholder="Leave empty to auto-generate">
+                        <small class="form-text">Leave empty to auto-generate name</small>
+                    </div>
+                    <div id="formErrors" class="alert-error"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel">Cancel</button>
+                <button type="button" id="createVMButton" class="btn btn-primary">
+                    <span class="spinner-border"></span>
+                    Create VM
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mark IP Occupied Modal -->
+<div id="markOccupiedModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 400px;">
+        <h3>Mark IP as Occupied</h3>
+        <p>Mark <strong id="markOccupiedIpDisplay"></strong> as occupied?</p>
+        <div class="form-group">
+            <label for="markOccupiedPassword">Admin Password</label>
+            <input type="password" id="markOccupiedPassword" class="form-control" placeholder="Enter your password">
+        </div>
+        <div class="form-group">
+            <label for="markOccupiedParticulars">Particulars</label>
+            <textarea id="markOccupiedParticulars" class="form-control" rows="2" placeholder="e.g., John - Sister concern laptop, using our network"></textarea>
+        </div>
+        <div id="markOccupiedError" class="alert alert-danger" style="display:none;"></div>
+        <div class="form-actions" style="margin-top: 1rem;">
+            <button id="markOccupiedSubmit" class="btn btn-primary">Confirm</button>
+            <button id="markOccupiedCancel" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Release Occupied IP Modal -->
+<div id="releaseOccupiedModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="max-width: 400px;">
+        <h3>Release Occupied IP</h3>
+        <p>Release <strong id="releaseOccupiedIpDisplay"></strong> back to free?</p>
+        <div class="form-group">
+            <label for="releaseOccupiedPassword">Admin Password</label>
+            <input type="password" id="releaseOccupiedPassword" class="form-control" placeholder="Enter your password">
+        </div>
+        <div id="releaseOccupiedError" class="alert alert-danger" style="display:none;"></div>
+        <div class="form-actions" style="margin-top: 1rem;">
+            <button id="releaseOccupiedSubmit" class="btn btn-primary">Release</button>
+            <button id="releaseOccupiedCancel" class="btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-dialog {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content {
+    padding: 0;
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+.required {
+    color: #dc3545;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-control.error {
+    border-color: #dc3545;
+}
+
+.error-message {
+    display: none;
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 5px;
+}
+
+.form-text {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.alert-error {
+    display: none;
+    padding: 12px;
+    margin-top: 15px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.spinner-border {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-rotate 0.75s linear infinite;
+}
+
+@keyframes spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+</style>
+
+<script src="{% static 'assets/js/vm_creation.js' %}"></script>
+<script src="{% static 'assets/js/guest_ip_assignment.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('ipSearchInput');
@@ -226,9 +747,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const ipAddress = item.textContent.toLowerCase();
                 const title = item.getAttribute('title') ? item.getAttribute('title').toLowerCase() : '';
                 const occupantName = item.getAttribute('data-occupant-name') ? item.getAttribute('data-occupant-name').toLowerCase() : '';
+                const guestName = item.getAttribute('data-guest-name') ? item.getAttribute('data-guest-name').toLowerCase() : '';
                 
-                // Check if search term matches IP address, title, or occupant name
-                if (ipAddress.includes(searchTerm) || title.includes(searchTerm) || occupantName.includes(searchTerm)) {
+                // Check if search term matches IP address, title, occupant name, or guest name
+                if (ipAddress.includes(searchTerm) || title.includes(searchTerm) || occupantName.includes(searchTerm) || guestName.includes(searchTerm)) {
                     item.classList.remove('hidden');
                     visibleInGroup++;
                     totalMatches++;
@@ -262,6 +784,257 @@ document.addEventListener('DOMContentLoaded', function() {
             this.dispatchEvent(new Event('input'));
         }
     });
+    
+    // IP Series Quick Filter
+    const seriesButtons = document.querySelectorAll('.ip-series-btn');
+    const mainIPSeries = ['192.168.10', '192.168.70', '192.168.11', '192.168.50'];
+    
+    seriesButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const selectedSeries = this.getAttribute('data-series');
+            
+            // Update active button state
+            seriesButtons.forEach(btn => btn.classList.remove('active'));
+            if (selectedSeries !== 'all') {
+                this.classList.add('active');
+            }
+            
+            // Clear search input
+            searchInput.value = '';
+            searchResultsInfo.textContent = '';
+            
+            if (selectedSeries === 'all') {
+                // Show all ranges
+                ipRangeGroups.forEach(group => {
+                    group.classList.remove('hidden');
+                    group.querySelectorAll('.ip-item').forEach(item => {
+                        item.classList.remove('hidden');
+                    });
+                });
+            } else if (selectedSeries === 'other') {
+                // Show only ranges that are NOT in the main IP series
+                ipRangeGroups.forEach(group => {
+                    const rangeTitle = group.querySelector('h3').textContent;
+                    const isMainSeries = mainIPSeries.some(series => rangeTitle.includes(series));
+                    
+                    if (isMainSeries) {
+                        group.classList.add('hidden');
+                    } else {
+                        group.classList.remove('hidden');
+                        group.querySelectorAll('.ip-item').forEach(item => {
+                            item.classList.remove('hidden');
+                        });
+                    }
+                });
+            } else {
+                // Show only selected series
+                ipRangeGroups.forEach(group => {
+                    const rangeTitle = group.querySelector('h3').textContent;
+                    
+                    if (rangeTitle.includes(selectedSeries)) {
+                        group.classList.remove('hidden');
+                        group.querySelectorAll('.ip-item').forEach(item => {
+                            item.classList.remove('hidden');
+                        });
+                    } else {
+                        group.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // Scroll to top smoothly
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    });
+});
+</script>
+<script>
+// Mark IP as Occupied functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const markOccupiedModal = document.getElementById('markOccupiedModal');
+    const markOccupiedIpDisplay = document.getElementById('markOccupiedIpDisplay');
+    const markOccupiedPassword = document.getElementById('markOccupiedPassword');
+    const markOccupiedError = document.getElementById('markOccupiedError');
+    const markOccupiedSubmit = document.getElementById('markOccupiedSubmit');
+    const markOccupiedCancel = document.getElementById('markOccupiedCancel');
+    let currentMarkOccupiedIp = '';
+    
+    // Attach click handler to all mark-occupied buttons
+    document.querySelectorAll('.mark-occupied-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            currentMarkOccupiedIp = this.getAttribute('data-ip-address');
+            markOccupiedIpDisplay.textContent = currentMarkOccupiedIp;
+            markOccupiedPassword.value = '';
+            document.getElementById('markOccupiedParticulars').value = '';
+            markOccupiedError.style.display = 'none';
+            markOccupiedModal.style.display = 'flex';
+            markOccupiedPassword.focus();
+        });
+    });
+    
+    // Cancel button
+    if (markOccupiedCancel) {
+        markOccupiedCancel.addEventListener('click', function() {
+            markOccupiedModal.style.display = 'none';
+        });
+    }
+    
+    // Submit button
+    if (markOccupiedSubmit) {
+        markOccupiedSubmit.addEventListener('click', function() {
+            const password = markOccupiedPassword.value.trim();
+            if (!password) {
+                markOccupiedError.textContent = 'Please enter your password.';
+                markOccupiedError.style.display = 'block';
+                return;
+            }
+            
+            // Send AJAX request
+            const formData = new FormData();
+            formData.append('ip_address', currentMarkOccupiedIp);
+            formData.append('password', password);
+            formData.append('particulars', document.getElementById('markOccupiedParticulars').value.trim());
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            fetch('/assets/ip/mark-occupied/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    markOccupiedModal.style.display = 'none';
+                    // Update the IP item in-place
+                    const ipItem = document.querySelector(`.mark-occupied-btn[data-ip-address="${currentMarkOccupiedIp}"]`).closest('.ip-item');
+                    if (ipItem) {
+                        ipItem.classList.remove('free');
+                        ipItem.classList.add('occupied');
+                        // Remove the mark button
+                        const btn = ipItem.querySelector('.mark-occupied-btn');
+                        if (btn) btn.remove();
+                        // Add occupied label
+                        const label = document.createElement('small');
+                        label.className = 'freed-date';
+                        label.textContent = '🔒 Marked by: ' + data.occupied_by;
+                        ipItem.appendChild(label);
+                        if (document.getElementById('markOccupiedParticulars').value.trim()) {
+                            const particularsLabel = document.createElement('small');
+                            particularsLabel.className = 'freed-date';
+                            particularsLabel.textContent = document.getElementById('markOccupiedParticulars').value.trim();
+                            ipItem.appendChild(particularsLabel);
+                        }
+                    }
+                } else {
+                    markOccupiedError.textContent = data.error;
+                    markOccupiedError.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                markOccupiedError.textContent = 'An error occurred. Please try again.';
+                markOccupiedError.style.display = 'block';
+            });
+        });
+    }
+    
+    // Allow Enter key in password field
+    if (markOccupiedPassword) {
+        markOccupiedPassword.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                markOccupiedSubmit.click();
+            }
+        });
+    }
+});
+</script>
+<script>
+// Release Occupied IP functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const releaseModal = document.getElementById('releaseOccupiedModal');
+    const releaseIpDisplay = document.getElementById('releaseOccupiedIpDisplay');
+    const releasePassword = document.getElementById('releaseOccupiedPassword');
+    const releaseError = document.getElementById('releaseOccupiedError');
+    const releaseSubmit = document.getElementById('releaseOccupiedSubmit');
+    const releaseCancel = document.getElementById('releaseOccupiedCancel');
+    let currentReleaseIp = '';
+    
+    document.querySelectorAll('.release-occupied-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            currentReleaseIp = this.getAttribute('data-ip-address');
+            releaseIpDisplay.textContent = currentReleaseIp;
+            releasePassword.value = '';
+            releaseError.style.display = 'none';
+            releaseModal.style.display = 'flex';
+            releasePassword.focus();
+        });
+    });
+    
+    if (releaseCancel) {
+        releaseCancel.addEventListener('click', function() {
+            releaseModal.style.display = 'none';
+        });
+    }
+    
+    if (releaseSubmit) {
+        releaseSubmit.addEventListener('click', function() {
+            const password = releasePassword.value.trim();
+            if (!password) {
+                releaseError.textContent = 'Please enter your password.';
+                releaseError.style.display = 'block';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('ip_address', currentReleaseIp);
+            formData.append('password', password);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            fetch('/assets/ip/release-occupied/', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    releaseModal.style.display = 'none';
+                    const ipItem = document.querySelector(`.release-occupied-btn[data-ip-address="${currentReleaseIp}"]`).closest('.ip-item');
+                    if (ipItem) {
+                        ipItem.classList.remove('occupied');
+                        ipItem.classList.add('free');
+                        // Clear all small elements and the release button
+                        ipItem.querySelectorAll('small, .release-occupied-btn').forEach(el => el.remove());
+                        // Add mark-occupied button for the now-free IP
+                        const markBtn = document.createElement('button');
+                        markBtn.className = 'mark-occupied-btn';
+                        markBtn.setAttribute('data-ip-address', currentReleaseIp);
+                        markBtn.textContent = 'Mark Occupied';
+                        ipItem.appendChild(markBtn);
+                    }
+                } else {
+                    releaseError.textContent = data.error;
+                    releaseError.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                releaseError.textContent = 'An error occurred. Please try again.';
+                releaseError.style.display = 'block';
+            });
+        });
+    }
+    
+    if (releasePassword) {
+        releasePassword.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') releaseSubmit.click();
+        });
+    }
 });
 </script>
 {% endblock %}

@@ -27,11 +27,30 @@
     color: white;
 }
 
-.issues-cell {
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+/* Ensure table fits properly with Actions column visible */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+    min-width: 100%;
+    table-layout: auto;
+}
+
+/* Make Actions column sticky on the right */
+.table-responsive table th:last-child,
+.table-responsive table td:last-child {
+    position: sticky;
+    right: 0;
+    background-color: white;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    min-width: 320px;
+    z-index: 1;
+}
+
+.table-responsive table th:last-child {
+    background-color: #f8f9fa;
 }
 </style>
 {% endblock %}
@@ -55,18 +74,60 @@
     {% endfor %}
 {% endif %}
 
+<!-- Filter Form Section -->
+<div class="filter-section">
+    <form method="get" action="{% url 'freed_systems' %}" class="filter-form">
+        <div class="filter-header">
+            <h3>Filter Freed Systems</h3>
+            {% if filter_form.search.value or filter_form.branch.value or filter_form.system_type.value or filter_form.health_status.value %}
+            <span class="filter-badge">
+                Filters Active
+            </span>
+            {% endif %}
+        </div>
+        
+        <div class="filter-fields">
+            <div class="filter-field">
+                <label for="{{ filter_form.search.id_for_label }}">{{ filter_form.search.label }}</label>
+                {{ filter_form.search }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.branch.id_for_label }}">{{ filter_form.branch.label }}</label>
+                {{ filter_form.branch }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.system_type.id_for_label }}">{{ filter_form.system_type.label }}</label>
+                {{ filter_form.system_type }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.health_status.id_for_label }}">{{ filter_form.health_status.label }}</label>
+                {{ filter_form.health_status }}
+            </div>
+        </div>
+        
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="{% url 'freed_systems' %}" class="btn btn-secondary">Clear Filters</a>
+        </div>
+    </form>
+</div>
+
 {% if freed_assets %}
 <div class="table-responsive">
     <table>
         <thead>
             <tr>
                 <th>Asset Tag</th>
+                <th>Branch</th>
                 <th>IP Address</th>
                 <th>System Type</th>
                 <th>Operating System</th>
                 <th>Health Status</th>
-                <th>Issues</th>
                 <th>Freed Date</th>
+                <th>History</th>
                 {% if user.is_staff %}
                 <th>Actions</th>
                 {% endif %}
@@ -76,6 +137,7 @@
             {% for asset in freed_assets %}
             <tr>
                 <td>{{ asset.asset_tag }}</td>
+                <td>{{ asset.branch.name }}</td>
                 <td>
                     {% if asset.ip_address %}
                         {{ asset.ip_address.address }}
@@ -85,7 +147,12 @@
                         N/A
                     {% endif %}
                 </td>
-                <td>{{ asset.system_type }}</td>
+                <td>
+                    {% if asset.is_server_controller %}
+                        <span class="badge-sc" title="Server Controller (192.168.50.x)">SC</span>
+                    {% endif %}
+                    {{ asset.system_type }}
+                </td>
                 <td>{{ asset.operating_system.name }}</td>
                 <td>
                     {% if asset.health_status == 'healthy' %}
@@ -96,14 +163,10 @@
                         <span class="badge badge-secondary">N/A</span>
                     {% endif %}
                 </td>
-                <td class="issues-cell">
-                    {% if asset.health_status == 'defective' and asset.issues_description %}
-                        {{ asset.issues_description|truncatewords:10 }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
                 <td>{{ asset.freed_date|date:"Y-m-d H:i" }}</td>
+                <td>
+                    <a href="{% url 'asset_history' asset.pk %}" class="btn btn-sm btn-info" title="View History">📋</a>
+                </td>
                 {% if user.is_staff %}
                 <td>
                     <a href="{% url 'freed_system_edit' asset.pk %}" class="btn btn-sm btn-primary">Edit</a>
@@ -111,6 +174,7 @@
                     <a href="{% url 'asset_reassign' asset.pk %}" class="btn btn-sm btn-success">Reassign</a>
                     {% endif %}
                     <a href="{% url 'asset_scrap' asset.pk %}" class="btn btn-sm btn-danger">Scrap</a>
+                    <a href="{% url 'freed_system_delete' asset.pk %}" class="btn btn-sm btn-dark">Delete</a>
                 </td>
                 {% endif %}
             </tr>
@@ -120,7 +184,11 @@
 </div>
 {% else %}
 <div class="alert alert-info">
+    {% if filter_form.search.value or filter_form.branch.value or filter_form.system_type.value or filter_form.health_status.value %}
+    <p>No freed systems found matching the selected filters.</p>
+    {% else %}
     <p>No freed systems found.</p>
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

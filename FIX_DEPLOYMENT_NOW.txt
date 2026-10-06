@@ -1,0 +1,75 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ⚠️  FIX DEPLOYMENT NOW - COPY & PASTE ⚠️
+═══════════════════════════════════════════════════════════════════════════════
+
+LINUX TEAM: Copy and paste these commands EXACTLY. Do NOT skip any line!
+
+═══════════════════════════════════════════════════════════════════════════════
+🔧 COMMANDS TO RUN (Copy entire block and paste in terminal)
+═══════════════════════════════════════════════════════════════════════════════
+
+# Step 1: Stop services
+sudo systemctl stop asset_tracker
+sudo systemctl stop nginx
+echo "✅ Services stopped"
+
+# Step 2: Go to project directory
+cd /var/www/asset_tracker
+echo "✅ In project directory"
+
+# Step 3: Collect static files (CRITICAL!)
+source venv/bin/activate
+python manage.py collectstatic --clear --noinput
+echo "✅ Static files collected"
+
+# Step 4: Fix permissions
+sudo chown -R www-data:www-data /var/www/asset_tracker/assets
+sudo chmod -R 755 /var/www/asset_tracker/assets
+echo "✅ Permissions fixed"
+
+# Step 5: Restart services
+sudo systemctl start asset_tracker
+sudo systemctl start nginx
+echo "✅ Services restarted"
+
+# Step 6: Verify services are running
+sudo systemctl status asset_tracker | grep "Active:"
+sudo systemctl status nginx | grep "Active:"
+echo "✅ Verification complete"
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ EXPECTED OUTPUT
+═══════════════════════════════════════════════════════════════════════════════
+
+You should see:
+- "X static files copied to..."
+- "Active: active (running)"
+- No errors
+
+═══════════════════════════════════════════════════════════════════════════════
+🧪 VERIFICATION COMMANDS (Run these after above commands)
+═══════════════════════════════════════════════════════════════════════════════
+
+# Check if bug fix is deployed
+grep -n "limit=30" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+# Check if CSS is collected
+ls -la /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+# Check if CSS has the fix
+grep "70vh" /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+# Check for errors
+sudo journalctl -u asset_tracker -n 20 --no-pager
+
+═══════════════════════════════════════════════════════════════════════════════
+📋 REPLY WITH THIS
+═══════════════════════════════════════════════════════════════════════════════
+
+After running the commands, reply with:
+
+✅ DONE - Commands executed successfully
+OR
+❌ ERROR - [paste the error message]
+
+═══════════════════════════════════════════════════════════════════════════════

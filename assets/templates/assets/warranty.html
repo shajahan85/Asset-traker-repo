@@ -26,7 +26,19 @@
                 <td>{{ asset.asset_tag }}</td>
                 <td>{{ asset.system_type }}</td>
                 <td>{{ asset.operating_system.name }}</td>
-                <td>{{ asset.ip_address.address|default:"N/A" }}</td>
+                <td>
+                    {% with primary_ip=asset.get_primary_ip %}
+                        {% if primary_ip %}
+                            {{ primary_ip.get_ip_display }}
+                        {% elif asset.ip_address %}
+                            {{ asset.ip_address.address }}
+                        {% elif asset.manual_ip %}
+                            {{ asset.manual_ip }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    {% endwith %}
+                </td>
                 <td>{{ asset.assigned_to|default:"N/A" }}</td>
                 <td>
                     {% if asset.team %}

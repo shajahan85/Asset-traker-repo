@@ -1,0 +1,211 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Edit Server Controller - Asset Tracker{% endblock %}
+
+{% block content %}
+<h1>Edit Server Controller</h1>
+<p class="text-muted">Edit server controller details (192.168.50.x)</p>
+
+{% if not is_server_controller %}
+<div class="alert alert-warning" style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
+    ⚠️ <strong>Warning:</strong> This system's IP address is not in the 192.168.50.x range. 
+    It will not appear in the Server Controllers list.
+</div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    
+    <fieldset style="border: 1px solid #dee2e6; padding: 1.5rem; border-radius: 4px; margin-bottom: 1.5rem;">
+        <legend style="font-size: 1.1rem; font-weight: 600; color: #2c3e50;">Basic Information</legend>
+        
+        <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+                <label for="{{ form.asset_tag.id_for_label }}">{{ form.asset_tag.label }}:</label>
+                {{ form.asset_tag }}
+                {% if form.asset_tag.errors %}
+                <div class="error">{{ form.asset_tag.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group" style="flex: 1;">
+                <label for="{{ form.system_type.id_for_label }}">{{ form.system_type.label }}:</label>
+                {{ form.system_type }}
+                {% if form.system_type.errors %}
+                <div class="error">{{ form.system_type.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.hardware_serial_number.id_for_label }}">{{ form.hardware_serial_number.label }}:</label>
+            {{ form.hardware_serial_number }}
+            {% if form.hardware_serial_number.errors %}
+            <div class="error">{{ form.hardware_serial_number.errors }}</div>
+            {% endif %}
+        </div>
+    </fieldset>
+    
+    <fieldset style="border: 1px solid #dee2e6; padding: 1.5rem; border-radius: 4px; margin-bottom: 1.5rem;">
+        <legend style="font-size: 1.1rem; font-weight: 600; color: #2c3e50;">Organization</legend>
+        
+        <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+                <label for="{{ form.branch.id_for_label }}">{{ form.branch.label }}:</label>
+                {{ form.branch }}
+                {% if form.branch.errors %}
+                <div class="error">{{ form.branch.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group" style="flex: 1;">
+                <label for="{{ form.team.id_for_label }}">{{ form.team.label }}:</label>
+                {{ form.team }}
+                {% if form.team.errors %}
+                <div class="error">{{ form.team.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </fieldset>
+    
+    <fieldset style="border: 1px solid #dee2e6; padding: 1.5rem; border-radius: 4px; margin-bottom: 1.5rem;">
+        <legend style="font-size: 1.1rem; font-weight: 600; color: #2c3e50;">System Details</legend>
+        
+        <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+                <label for="{{ form.operating_system.id_for_label }}">{{ form.operating_system.label }}:</label>
+                {{ form.operating_system }}
+                {% if form.operating_system.errors %}
+                <div class="error">{{ form.operating_system.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group" style="flex: 1;">
+                <label for="{{ form.manufacturer.id_for_label }}">{{ form.manufacturer.label }}:</label>
+                {{ form.manufacturer }}
+                {% if form.manufacturer.errors %}
+                <div class="error">{{ form.manufacturer.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.warranty_expiration.id_for_label }}">{{ form.warranty_expiration.label }}:</label>
+            {{ form.warranty_expiration }}
+            {% if form.warranty_expiration.errors %}
+            <div class="error">{{ form.warranty_expiration.errors }}</div>
+            {% endif %}
+            <small style="color: #666;">Format: YYYY-MM-DD</small>
+        </div>
+    </fieldset>
+    
+    <fieldset style="border: 1px solid #dee2e6; padding: 1.5rem; border-radius: 4px; margin-bottom: 1.5rem;">
+        <legend style="font-size: 1.1rem; font-weight: 600; color: #2c3e50;">Hyper-V Virtual Machines</legend>
+        
+        {% if hyperv_vms %}
+        <table style="width: 100%; margin-bottom: 1rem;">
+            <thead>
+                <tr>
+                    <th>VM Name</th>
+                    <th>VM IP Address</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vm in hyperv_vms %}
+                <tr>
+                    <td>{{ vm.name }}</td>
+                    <td>{{ vm.get_display_ip }}</td>
+                    <td>
+                        {% if vm.is_active %}
+                            <span class="badge badge-success">{{ vm.get_power_status_display }}</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p style="color: #666; font-size: 0.9rem;">
+            To manage VMs, go to <a href="{% url 'hyperv_vm_list' %}">Virtual Machines</a> page
+        </p>
+        {% else %}
+        <p style="color: #999;">No Hyper-V VMs associated with this server controller</p>
+        <p style="color: #666; font-size: 0.9rem;">
+            To add VMs, go to <a href="{% url 'hyperv_vm_list' %}">Virtual Machines</a> page
+        </p>
+        {% endif %}
+    </fieldset>
+    
+    <fieldset style="border: 1px solid #dee2e6; padding: 1.5rem; border-radius: 4px; margin-bottom: 1.5rem;">
+        <legend style="font-size: 1.1rem; font-weight: 600; color: #2c3e50;">Additional Information</legend>
+        
+        <div class="form-group">
+            <label for="{{ form.particulars.id_for_label }}">{{ form.particulars.label }}:</label>
+            {{ form.particulars }}
+            {% if form.particulars.errors %}
+            <div class="error">{{ form.particulars.errors }}</div>
+            {% endif %}
+        </div>
+    </fieldset>
+    
+    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button>
+        <a href="{% url 'server_controller_list' %}" class="btn btn-secondary" style="flex: 1;">Cancel</a>
+    </div>
+</form>
+
+<style>
+.form-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.text-muted {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+fieldset {
+    margin-bottom: 1.5rem;
+}
+
+legend {
+    padding: 0 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

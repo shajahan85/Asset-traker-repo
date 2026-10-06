@@ -1,0 +1,148 @@
+{% extends "assets/base.html" %}
+{% load static %}
+
+{% block title %}Add Secondary IP - {{ asset.asset_tag }} - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Add Secondary IP Address</h3>
+                    <p class="mb-0 text-muted">Asset: {{ asset.asset_tag }} ({{ asset.system_type }})</p>
+                </div>
+                <div class="card-body">
+                    <!-- Display current IPs -->
+                    <div class="mb-4">
+                        <h5>Current IP Addresses</h5>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>IP Address</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if primary_ip %}
+                                <tr>
+                                    <td><strong>{{ primary_ip.get_ip_display }}</strong></td>
+                                    <td>
+                                        {% if primary_ip.ip_address %}
+                                            Managed
+                                        {% else %}
+                                            Manual
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="badge badge-primary">Primary</span></td>
+                                </tr>
+                                {% endif %}
+                                {% for ip in secondary_ips %}
+                                <tr>
+                                    <td>{{ ip.get_ip_display }}</td>
+                                    <td>
+                                        {% if ip.ip_address %}
+                                            Managed
+                                        {% else %}
+                                            Manual
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="badge badge-secondary">Secondary</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <hr>
+
+                    <!-- Secondary IP Form -->
+                    <h5 class="mb-3">Add New Secondary IP</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Display form errors -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- IP Type Selection -->
+                        <div class="form-group">
+                            <label>{{ form.ip_type.label }}</label>
+                            <div>
+                                {% for radio in form.ip_type %}
+                                <div class="form-check form-check-inline">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.ip_type.errors %}
+                            <div class="text-danger">{{ form.ip_type.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Managed IP Dropdown -->
+                        <div class="form-group" id="managed-ip-group">
+                            <label for="{{ form.ip_address.id_for_label }}">{{ form.ip_address.label }}</label>
+                            {{ form.ip_address }}
+                            {% if form.ip_address.errors %}
+                            <div class="text-danger">{{ form.ip_address.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Manual IP Input -->
+                        <div class="form-group" id="manual-ip-group" style="display: none;">
+                            <label for="{{ form.manual_ip.id_for_label }}">{{ form.manual_ip.label }}</label>
+                            {{ form.manual_ip }}
+                            {% if form.manual_ip.errors %}
+                            <div class="text-danger">{{ form.manual_ip.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary">Add Secondary IP</button>
+                            <a href="{% url 'asset_detail' asset.pk %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const managedRadio = document.querySelector('input[value="managed"]');
+    const manualRadio = document.querySelector('input[value="manual"]');
+    const managedGroup = document.getElementById('managed-ip-group');
+    const manualGroup = document.getElementById('manual-ip-group');
+
+    function updateIPFields() {
+        if (manualRadio && manualRadio.checked) {
+            managedGroup.style.display = 'none';
+            manualGroup.style.display = 'block';
+            document.getElementById('id_manual_ip_input').style.display = 'block';
+        } else {
+            managedGroup.style.display = 'block';
+            manualGroup.style.display = 'none';
+        }
+    }
+
+    if (managedRadio) {
+        managedRadio.addEventListener('change', updateIPFields);
+    }
+    if (manualRadio) {
+        manualRadio.addEventListener('change', updateIPFields);
+    }
+
+    // Initial state
+    updateIPFields();
+});
+</script>
+{% endblock %}

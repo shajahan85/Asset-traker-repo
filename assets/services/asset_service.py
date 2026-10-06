@@ -5,13 +5,15 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from assets.models import Asset, IPAddress
 from assets.services.ip_management_service import IPManagementService
+from assets.services.notification_service import NotificationService
+from assets.services.history_service import HistoryService
 
 
 class AssetService:
     """Service class for asset management operations."""
     
     @staticmethod
-    def create_asset(data, user):
+    def create_asset(data, user, skip_notification=False):
         """
         Create new asset with validation and IP assignment.
         
@@ -19,6 +21,7 @@ class AssetService:
             data: Dictionary containing asset data (asset_tag, system_type, operating_system,
                   ip_address, particulars, assigned_to, team, warranty_expiration)
             user: User creating the asset (for audit/permission checks)
+            skip_notification: If True, skip sending email notification
         
         Returns:
             Asset: The created asset instance
@@ -53,7 +56,9 @@ class AssetService:
                 manual_ip=data.get('manual_ip'),
                 particulars=data.get('particulars', ''),
                 assigned_to=data.get('assigned_to', ''),
+                employee_code=data.get('employee_code', ''),
                 team_id=data.get('team'),
+                branch_id=data.get('branch'),
                 warranty_expiration=data.get('warranty_expiration'),
                 status='active'
             )
@@ -64,10 +69,16 @@ class AssetService:
                 asset.ip_address = ip_address
                 asset.save()
             
+            # Record history
+            HistoryService.record_creation(asset, user)
+            
+            # Send email notification
+            NotificationService.send_asset_created_notification(asset, user, skip_notification)
+            
             return asset
     
     @staticmethod
-    def update_asset(asset, data, user):
+    def update_asset(asset, data, user, skip_notification=False):
         """
         Update asset with IP change handling.
         
@@ -75,6 +86,7 @@ class AssetService:
             asset: Asset instance to update
             data: Dictionary containing updated asset data
             user: User updating the asset (for audit/permission checks)
+            skip_notification: If True, skip sending email notification
         
         Returns:
             Asset: The updated asset instance
@@ -83,6 +95,11 @@ class AssetService:
             ValidationError: If validation fails
         """
         with transaction.atomic():
+            # Capture old values before update
+            old_values = {}
+            for field in HistoryService.TRACKED_FIELDS:
+                old_values[field] = HistoryService._get_field_value(asset, field)
+            
             # Check if asset tag is being changed and validate uniqueness
             new_asset_tag = data.get('asset_tag')
             if new_asset_tag and new_asset_tag != asset.asset_tag:
@@ -121,14 +138,25 @@ class AssetService:
                 asset.particulars = data['particulars']
             if 'assigned_to' in data:
                 asset.assigned_to = data['assigned_to']
+            if 'employee_code' in data:
+                asset.employee_code = data['employee_code']
             if 'team' in data:
                 asset.team_id = data['team']
+            if 'branch' in data:
+                asset.branch_id = data['branch']
             if 'warranty_expiration' in data:
                 asset.warranty_expiration = data['warranty_expiration']
             if 'hardware_serial_number' in data:
                 asset.hardware_serial_number = data['hardware_serial_number']
             
             asset.save()
+            
+            # Record history
+            HistoryService.record_update(asset, old_values, user)
+            
+            # Send email notification
+            NotificationService.send_asset_updated_notification(asset, user, skip_notification=skip_notification)
+            
             return asset
     
     @staticmethod
@@ -204,11 +232,16 @@ class AssetService:
         with transaction.atomic():
             # Verify user password
             if not check_password(password, user.password):
-                raise ValidationError({'password': 'Incorrect password'})
+                raise ValidationError('Incorrect password. Please try again.')
             
             # Verify asset is active
             if asset.status != 'active':
-                raise ValidationError({'status': 'Only active assets can be freed'})
+                raise ValidationError('Only active assets can be freed')
+            
+            # Capture old values before clearing
+            old_assigned_to = asset.assigned_to
+            old_team = asset.team
+            old_ip_address = asset.ip_address
             
             # Change status to freed
             asset.status = 'freed'
@@ -233,6 +266,20 @@ class AssetService:
             asset.manual_ip = None
             
             asset.save()
+            
+            # Record history with old assignment details
+            HistoryService.record_status_change(
+                asset, 
+                'freed', 
+                user,
+                old_assigned_to=old_assigned_to,
+                old_team=old_team,
+                old_ip_address=old_ip_address
+            )
+            
+            # Send email notification
+            NotificationService.send_asset_freed_notification(asset, user)
+            
             return asset
     
     @staticmethod
@@ -276,6 +323,13 @@ class AssetService:
                 IPManagementService.release_ip(asset.ip_address)
             
             asset.save()
+            
+            # Record history
+            HistoryService.record_status_change(asset, 'scrapped', user, notes=scrapping_reason)
+            
+            # Send email notification
+            NotificationService.send_asset_scrapped_notification(asset, user)
+            
             return asset
 
     @staticmethod
@@ -334,6 +388,9 @@ class AssetService:
             if ip_address:
                 IPManagementService.assign_ip(ip_address, asset)
             
+            # Record history
+            HistoryService.record_creation(asset, user)
+            
             return asset
     
     @staticmethod
@@ -356,6 +413,10 @@ class AssetService:
             if asset.status != 'freed':
                 raise ValidationError('Only freed assets can be updated with this method.')
             
+            # Capture old health_status and issues_description values before update
+            old_health_status = asset.health_status
+            old_issues_description = asset.issues_description
+            
             # Update fields
             asset.health_status = data['health_status']
             asset.issues_description = data.get('issues_description')
@@ -363,6 +424,10 @@ class AssetService:
                 asset.particulars = data.get('particulars')
             
             asset.save()
+            
+            # Record history
+            HistoryService.record_health_status_update(asset, old_health_status, user, old_issues_description)
+            
             return asset
     
     @staticmethod
@@ -433,5 +498,72 @@ class AssetService:
             asset.issues_description = None
             
             asset.save()
+            
+            # Record history
+            HistoryService.record_status_change(asset, 'reassigned', user)
+            
+            # Send email notification
+            NotificationService.send_asset_reassigned_notification(asset, user)
+            
             return asset
 
+
+    @staticmethod
+    def create_scrapped_asset(data, user):
+        """
+        Create a new scrapped system directly without requiring a freed asset.
+        
+        Args:
+            data: Dictionary containing asset fields
+            user: User creating the asset
+            
+        Returns:
+            Asset: Created asset instance
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        from django.utils import timezone
+        
+        with transaction.atomic():
+            # Validate asset_tag uniqueness
+            asset_tag = data.get('asset_tag')
+            if Asset.objects.filter(asset_tag=asset_tag).exists():
+                raise ValidationError({'asset_tag': 'Asset tag already exists.'})
+            
+            # Handle IP address assignment
+            ip_address_id = data.get('ip_address')
+            ip_address = None
+            if ip_address_id:
+                try:
+                    from assets.models import IPAddress
+                    ip_address = IPAddress.objects.get(id=ip_address_id)
+                    if ip_address.is_assigned:
+                        raise ValidationError({'ip_address': 'IP address already in use'})
+                except IPAddress.DoesNotExist:
+                    raise ValidationError({'ip_address': 'Invalid IP address'})
+            
+            # Create asset with scrapped status
+            asset = Asset.objects.create(
+                asset_tag=data['asset_tag'],
+                system_type=data['system_type'],
+                operating_system=data['operating_system'],
+                ip_address=ip_address,
+                manual_ip=data.get('manual_ip'),
+                manufacturer=data.get('manufacturer'),
+                particulars=data.get('particulars'),
+                scrapping_reason=data['scrapping_reason'],
+                status='scrapped',
+                scrapped_date=timezone.now(),
+                assigned_to=None,
+                team=None
+            )
+            
+            # Assign IP if provided
+            if ip_address:
+                IPManagementService.assign_ip(ip_address, asset)
+            
+            # Record creation in history
+            HistoryService.record_creation(asset, user)
+            
+            return asset

@@ -44,7 +44,7 @@ class FilterService:
     
     def filter_by_asset_tag(self, queryset: QuerySet, asset_tag: str) -> QuerySet:
         """
-        Filter assets by BIDC number (asset tag).
+        Filter assets by asset tag.
         
         Args:
             queryset: Base QuerySet to filter
@@ -68,6 +68,19 @@ class FilterService:
         """
         return queryset.filter(team_id=team_id)
     
+    def filter_by_branch(self, queryset: QuerySet, branch_id: int) -> QuerySet:
+        """
+        Filter assets by branch.
+        
+        Args:
+            queryset: Base QuerySet to filter
+            branch_id: Branch ID
+            
+        Returns:
+            Filtered QuerySet
+        """
+        return queryset.filter(branch_id=branch_id)
+    
     def filter_by_assigned_user(self, queryset: QuerySet, user_name: str) -> QuerySet:
         """
         Filter assets by assigned user name.
@@ -81,9 +94,29 @@ class FilterService:
         """
         return queryset.filter(assigned_to__icontains=user_name)
     
+    def filter_by_employee_code(self, queryset: QuerySet, employee_code: str) -> QuerySet:
+        """
+        Filter assets by employee code.
+        
+        Args:
+            queryset: Base QuerySet to filter
+            employee_code: Employee code search string (partial match)
+            
+        Returns:
+            Filtered QuerySet
+        """
+        return queryset.filter(employee_code__icontains=employee_code)
+    
     def filter_by_ip_address(self, queryset: QuerySet, ip_address: str) -> QuerySet:
         """
-        Filter assets by IP address.
+        Filter assets by IP address (primary, additional, managed, manual, and VM IPs).
+        Searches across:
+        - Old direct FK (Asset.ip_address)
+        - Old manual field (Asset.manual_ip)
+        - AssetIPAddress junction table (managed IPs via ip_address FK)
+        - AssetIPAddress junction table (manual IPs)
+        - Hosted VMs (managed IP via ip_address FK) - returns host machine
+        - Hosted VMs (manual IP) - returns host machine
         
         Args:
             queryset: Base QuerySet to filter
@@ -92,7 +125,15 @@ class FilterService:
         Returns:
             Filtered QuerySet
         """
-        return queryset.filter(ip_address__address__icontains=ip_address)
+        from django.db.models import Q
+        return queryset.filter(
+            Q(ip_address__address__icontains=ip_address) | 
+            Q(manual_ip__icontains=ip_address) |
+            Q(asset_ip_addresses__ip_address__address__icontains=ip_address) |
+            Q(asset_ip_addresses__manual_ip__icontains=ip_address) |
+            Q(hosted_vms__ip_address__address__icontains=ip_address) |
+            Q(hosted_vms__manual_ip__icontains=ip_address)
+        ).distinct()
     
     def apply_filters(self, queryset: QuerySet, filters: Dict) -> QuerySet:
         """
@@ -106,6 +147,15 @@ class FilterService:
             Filtered QuerySet with all filters applied
         """
         filtered_qs = queryset
+        
+        # Filter by branch
+        branch_filter = filters.get('branch')
+        if branch_filter:
+            try:
+                branch_id = int(branch_filter)
+                filtered_qs = self.filter_by_branch(filtered_qs, branch_id)
+            except (ValueError, TypeError):
+                pass
         
         # Filter by operating system
         os_filter = filters.get('operating_system')
@@ -136,6 +186,10 @@ class FilterService:
         # Filter by assigned user (partial match)
         if filters.get('assigned_to'):
             filtered_qs = self.filter_by_assigned_user(filtered_qs, filters['assigned_to'])
+        
+        # Filter by employee code (partial match)
+        if filters.get('employee_code'):
+            filtered_qs = self.filter_by_employee_code(filtered_qs, filters['employee_code'])
         
         # Filter by IP address (partial match)
         if filters.get('ip_address'):

@@ -1,0 +1,162 @@
+================================================================================
+ASSET TRACKER - NETWORK ACCESS TROUBLESHOOTING GUIDE
+================================================================================
+
+SERVER INFORMATION:
+- Server IP: 192.168.11.213
+- Port: 8000
+- URL: http://192.168.11.213:8000
+
+================================================================================
+QUICK START (RECOMMENDED)
+================================================================================
+
+1. RIGHT-CLICK on "start_server.bat"
+2. Select "Run as Administrator"
+3. The script will:
+   - Add Windows Firewall rule automatically
+   - Start the Django server
+   - Display the network URL
+
+4. Access from other computers:
+   http://192.168.11.213:8000
+
+================================================================================
+MANUAL FIREWALL CONFIGURATION
+================================================================================
+
+If the batch file doesn't work, add firewall rule manually:
+
+METHOD 1: Using Command Prompt (Run as Administrator)
+------------------------------------------------------
+1. Press Win + X
+2. Select "Command Prompt (Admin)" or "PowerShell (Admin)"
+3. Run this command:
+
+   netsh advfirewall firewall add rule name="Django Asset Tracker" dir=in action=allow protocol=TCP localport=8000
+
+4. You should see: "Ok."
+
+
+METHOD 2: Using Windows Firewall GUI
+------------------------------------------------------
+1. Press Win + R, type: wf.msc, press Enter
+2. Click "Inbound Rules" in left panel
+3. Click "New Rule..." in right panel
+4. Select "Port" → Next
+5. Select "TCP" and enter port: 8000 → Next
+6. Select "Allow the connection" → Next
+7. Check all profiles (Domain, Private, Public) → Next
+8. Name: Django Asset Tracker → Finish
+
+================================================================================
+TESTING NETWORK ACCESS
+================================================================================
+
+From the SERVER computer (192.168.11.213):
+-------------------------------------------
+1. Open browser
+2. Go to: http://localhost:8000
+3. Should see the Asset Tracker login page
+
+From ANOTHER computer on the network:
+--------------------------------------
+1. Open Command Prompt
+2. Test ping:
+   ping 192.168.11.213
+   
+   Expected: Reply from 192.168.11.213
+   
+3. Test port (if telnet is installed):
+   telnet 192.168.11.213 8000
+   
+   Expected: Connection successful (blank screen)
+   
+4. Open browser
+5. Go to: http://192.168.11.213:8000
+6. Should see the Asset Tracker login page
+
+================================================================================
+COMMON ISSUES AND SOLUTIONS
+================================================================================
+
+ISSUE 1: "This site can't be reached" or "Connection timed out"
+----------------------------------------------------------------
+CAUSE: Windows Firewall is blocking port 8000
+SOLUTION: Add firewall rule using Method 1 or 2 above
+
+ISSUE 2: "Connection refused"
+----------------------------------------------------------------
+CAUSE: Django server is not running
+SOLUTION: 
+1. Open Command Prompt in D:\Asset tracker
+2. Run: python manage.py runserver 0.0.0.0:8000
+
+ISSUE 3: Can access from server but not from network
+----------------------------------------------------------------
+CAUSE: Server is running on 127.0.0.1 instead of 0.0.0.0
+SOLUTION: Make sure to use 0.0.0.0:8000 when starting server
+
+ISSUE 4: "Access denied" when adding firewall rule
+----------------------------------------------------------------
+CAUSE: Not running as Administrator
+SOLUTION: Right-click Command Prompt/PowerShell → Run as Administrator
+
+ISSUE 5: Different IP address
+----------------------------------------------------------------
+CAUSE: Server has multiple network adapters
+SOLUTION: 
+1. Run: ipconfig
+2. Find the IPv4 address starting with 192.168
+3. Use that IP address to access from network
+
+================================================================================
+VERIFY FIREWALL RULE
+================================================================================
+
+To check if firewall rule exists:
+
+1. Open Command Prompt
+2. Run: netsh advfirewall firewall show rule name="Django Asset Tracker"
+
+Expected output:
+Rule Name:                            Django Asset Tracker
+Enabled:                              Yes
+Direction:                            In
+Profiles:                             Domain,Private,Public
+LocalPort:                            8000
+Protocol:                             TCP
+Action:                               Allow
+
+================================================================================
+KEEPING SERVER RUNNING
+================================================================================
+
+The Django development server will stop if:
+- You close the Command Prompt window
+- You press CTRL+C
+- The computer restarts
+- There's an error in the code
+
+To keep it running:
+1. Don't close the Command Prompt window
+2. Minimize it instead
+3. Or use the start_server.bat file
+
+For production use, consider:
+- Using a proper web server (Apache, Nginx)
+- Running as a Windows Service
+- Using a process manager
+
+================================================================================
+CONTACT INFORMATION
+================================================================================
+
+If you still can't access the site:
+
+1. Take a screenshot of the error message
+2. Note which computer you're trying to access from
+3. Check if both computers are on the same network (192.168.11.x)
+4. Verify the server computer's IP hasn't changed
+
+================================================================================

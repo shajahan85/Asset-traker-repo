@@ -5,7 +5,12 @@
 {% block content %}
 <div class="header-actions">
     <h1>Scrapped Items</h1>
-    <a href="{% url 'export_scrapped_assets' %}" class="btn btn-success">Export to Excel</a>
+    <div>
+        {% if user.is_staff %}
+        <a href="{% url 'scrapped_system_create' %}" class="btn btn-primary">Add Scrapped System</a>
+        {% endif %}
+        <a href="{% url 'export_scrapped_assets' %}" class="btn btn-success">Export to Excel</a>
+    </div>
 </div>
 
 {% if messages %}
@@ -15,6 +20,23 @@
         </div>
     {% endfor %}
 {% endif %}
+
+<!-- Search Box -->
+<div style="margin-bottom: 20px;">
+    <form method="get" action="{% url 'scrapped_items' %}" style="display: flex; gap: 10px; align-items: center;">
+        <input 
+            type="text" 
+            name="search" 
+            placeholder="Search by BIDC number..." 
+            value="{{ search_query }}"
+            style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 300px;"
+        >
+        <button type="submit" class="btn btn-primary">Search</button>
+        {% if search_query %}
+        <a href="{% url 'scrapped_items' %}" class="btn btn-secondary">Clear</a>
+        {% endif %}
+    </form>
+</div>
 
 {% if scrapped_assets %}
 <div class="table-responsive">
@@ -27,6 +49,7 @@
                 <th>System Make</th>
                 <th>Scrapped Date</th>
                 <th>Scrapping Reason</th>
+                <th>History</th>
             </tr>
         </thead>
         <tbody>
@@ -48,6 +71,9 @@
                 <td>{{ asset.manufacturer|default:"N/A" }}</td>
                 <td>{{ asset.scrapped_date|date:"Y-m-d H:i" }}</td>
                 <td>{{ asset.scrapping_reason|default:"N/A" }}</td>
+                <td>
+                    <a href="{% url 'asset_history' asset.pk %}" class="btn btn-sm btn-info" title="View History">📋</a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -55,7 +81,11 @@
 </div>
 {% else %}
 <div class="alert alert-info">
+    {% if search_query %}
+    <p>No scrapped items found matching "{{ search_query }}".</p>
+    {% else %}
     <p>No scrapped items found.</p>
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

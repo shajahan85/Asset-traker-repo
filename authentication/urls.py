@@ -10,7 +10,7 @@ from .views import (
 )
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/login/', permanent=False), name='root_redirect'),
+    path('', RedirectView.as_view(url='/assets/', permanent=False), name='root_redirect'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('dashboard/', dashboard_view, name='dashboard'),

@@ -1,0 +1,28 @@
+# Production requirements for Asset Tracker Django application
+
+# Django and core dependencies
+Django==4.2.30
+gunicorn==21.2.0
+psycopg2-binary==2.9.9  # PostgreSQL adapter (if using PostgreSQL)
+# mysqlclient==2.2.0  # MySQL adapter (if using MySQL)
+pillow==10.2.0  # Image processing
+
+# Excel export
+openpyxl==3.1.2
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Security
+django-cors-headers==4.3.1
+
+# Performance
+whitenoise==6.6.0  # Static file serving
+
+# Monitoring (optional)
+# sentry-sdk==1.40.0  # Error tracking
+# django-debug-toolbar==4.2.0  # Debug toolbar (dev only)
+
+# Additional utilities
+pytz==2024.1
+python-dateutil==2.8.2

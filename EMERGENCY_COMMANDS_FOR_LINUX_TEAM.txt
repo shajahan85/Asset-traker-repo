@@ -1,0 +1,81 @@
+═══════════════════════════════════════════════════════════════════════════════
+              🚨 SITE DOWN - RUN THESE COMMANDS IMMEDIATELY 🚨
+═══════════════════════════════════════════════════════════════════════════════
+
+Linux team: Copy and paste these commands one by one and send output.
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMAND 1: Check service status
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl status asset_tracker
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMAND 2: Check Nginx status
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl status nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMAND 3: Check Django errors (CRITICAL!)
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo journalctl -u asset_tracker -n 100 --no-pager | tail -50
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMAND 4: Check if services are listening on ports
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo netstat -tlnp | grep -E ':80|:8000'
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMAND 5: Try to start services
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl start asset_tracker
+sudo systemctl start nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMAND 6: Check if they started successfully
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl is-active asset_tracker
+sudo systemctl is-active nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+IF SERVICES FAIL TO START - RESTORE BACKUP IMMEDIATELY
+═══════════════════════════════════════════════════════════════════════════════
+
+# Stop services
+sudo systemctl stop asset_tracker nginx
+
+# Find backup directory
+ls -la /var/www/asset_tracker/ | grep backup
+
+# Restore backup (replace YYYYMMDD with actual date)
+cd /var/www/asset_tracker
+sudo rm -rf assets/
+sudo cp -r assets.backup.YYYYMMDD assets/
+
+# Fix permissions
+sudo chown -R www-data:www-data assets
+sudo chmod -R 755 assets
+
+# Start services
+sudo systemctl start asset_tracker nginx
+
+# Verify
+sudo systemctl status asset_tracker nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+SEND THIS INFORMATION BACK:
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Is asset_tracker service running? YES / NO
+2. Is nginx service running? YES / NO
+3. Any errors in journalctl output? YES / NO
+   If YES, paste the error lines
+4. Did services start successfully? YES / NO
+5. Can you access http://localhost from the server? YES / NO
+
+═══════════════════════════════════════════════════════════════════════════════

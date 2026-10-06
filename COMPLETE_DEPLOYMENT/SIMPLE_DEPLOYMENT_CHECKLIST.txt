@@ -1,0 +1,161 @@
+═══════════════════════════════════════════════════════════════════════════════
+              SIMPLE DEPLOYMENT CHECKLIST - PRINT AND FOLLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+Date: _____________    Deployed by: _____________________
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 1: PREPARATION
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] Received COMPLETE_DEPLOYMENT folder
+[ ] Copied to server: /tmp/COMPLETE_DEPLOYMENT
+[ ] Verified all files present (24 files total)
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 2: STOP SERVICES
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] sudo systemctl stop asset_tracker
+[ ] sudo systemctl stop nginx
+[ ] Both services stopped
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 3: BACKUP CURRENT FILES
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] sudo cp -r /var/www/asset_tracker/assets /var/www/asset_tracker/assets.backup.$(date +%Y%m%d)
+[ ] Backup created successfully
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 4: DEPLOY PYTHON FILES (5 files)
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] cd /tmp/COMPLETE_DEPLOYMENT
+[ ] sudo cp assets/views.py /var/www/asset_tracker/assets/
+[ ] sudo cp assets/views_server_controller.py /var/www/asset_tracker/assets/
+[ ] sudo cp assets/forms/asset_forms.py /var/www/asset_tracker/assets/forms/
+[ ] sudo cp assets/services/asset_service.py /var/www/asset_tracker/assets/services/
+[ ] sudo cp assets/services/notification_service.py /var/www/asset_tracker/assets/services/
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 5: DEPLOY TEMPLATES (6 files)
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] sudo cp -r assets/templates/assets/* /var/www/asset_tracker/assets/templates/assets/
+[ ] All 6 template files copied
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 6: DEPLOY CSS FILES (2 files) ⭐ CRITICAL!
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] sudo mkdir -p /var/www/asset_tracker/assets/static/assets/css
+[ ] sudo cp assets/static/assets/css/styles.css /var/www/asset_tracker/assets/static/assets/css/
+[ ] sudo cp assets/static/assets/css/mobile.css /var/www/asset_tracker/assets/static/assets/css/
+[ ] Both CSS files copied
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 7: SET PERMISSIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] sudo chown -R www-data:www-data /var/www/asset_tracker/assets
+[ ] sudo chmod -R 755 /var/www/asset_tracker/assets
+[ ] Permissions set correctly
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 8: COLLECT STATIC FILES ⭐ MOST CRITICAL - DON'T SKIP!
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] cd /var/www/asset_tracker
+[ ] source venv/bin/activate
+[ ] python manage.py collectstatic --clear --noinput
+[ ] Command completed successfully (no errors)
+[ ] CSS files copied to staticfiles directory
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 9: START SERVICES
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] sudo systemctl start asset_tracker
+[ ] sudo systemctl start nginx
+[ ] Both services started
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 10: VERIFY SERVICES RUNNING
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] sudo systemctl status asset_tracker | grep "active (running)"
+[ ] sudo systemctl status nginx | grep "active (running)"
+[ ] Both showing active (running)
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 11: CHECK LOGS FOR ERRORS
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] sudo journalctl -u asset_tracker -n 50 --no-pager
+[ ] No errors in logs
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 12: RUN VERIFICATION SCRIPT
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] cd /tmp/COMPLETE_DEPLOYMENT
+[ ] bash verify_deployment.sh
+[ ] All checks PASSED (0 failed)
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 13: BROWSER TESTING
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] Told user to clear browser cache (Ctrl+Shift+Delete)
+[ ] User tested: Login redirects to /assets/ page
+[ ] User tested: Horizontal scrollbar at TOP of table
+[ ] User tested: Table scrolls with fixed header
+[ ] User tested: Edit BIDC1326 (Sankar) - no freeze
+[ ] User tested: Edit Kharunnisa's asset - no freeze
+[ ] User tested: Server Controllers menu visible
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 14: FINAL VERIFICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+[ ] Bug fix verified (asset_forms.py):
+    grep "limit=30" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+[ ] CSS fix verified (styles.css):
+    grep "max-height.*70vh" /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+[ ] Scrolling fix verified:
+    grep "overflow-y.*auto" /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ DEPLOYMENT COMPLETE
+═══════════════════════════════════════════════════════════════════════════════
+
+Deployment completed: [ ] YES  [ ] NO
+
+If NO, what failed? ___________________________________________________
+
+If issues occurred, see: TROUBLESHOOTING.md
+
+═══════════════════════════════════════════════════════════════════════════════
+SIGN-OFF
+═══════════════════════════════════════════════════════════════════════════════
+
+Linux Team Member: ________________________   Date/Time: _______________
+
+User Confirmed Working: ____________________   Date/Time: _______________
+
+═══════════════════════════════════════════════════════════════════════════════
+NOTES
+═══════════════════════════════════════════════════════════════════════════════
+
+_________________________________________________________________________
+
+_________________________________________________________________________
+
+_________________________________________________________________________
+
+_________________________________________________________________________
+
+═══════════════════════════════════════════════════════════════════════════════

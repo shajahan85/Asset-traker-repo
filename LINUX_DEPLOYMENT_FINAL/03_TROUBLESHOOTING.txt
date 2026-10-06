@@ -1,0 +1,202 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    TROUBLESHOOTING GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+Use this guide if verification checks fail.
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEM 1: Bug fix check fails (limit=30 not found)
+═══════════════════════════════════════════════════════════════════════════════
+
+Symptom: grep "limit=30" returns nothing
+
+Cause: asset_forms.py was not copied
+
+Solution:
+1. Check if file exists:
+   ls -la /var/www/asset_tracker/assets/forms/asset_forms.py
+
+2. If not found, copy package is in wrong location
+
+3. If found, check first 50 lines:
+   head -50 /var/www/asset_tracker/assets/forms/asset_forms.py
+
+4. If content is wrong, recopy:
+   sudo cp /tmp/LINUX_DEPLOYMENT_FINAL/assets/forms/asset_forms.py \
+           /var/www/asset_tracker/assets/forms/
+   sudo systemctl restart asset_tracker
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEM 2: CSS not found in staticfiles
+═══════════════════════════════════════════════════════════════════════════════
+
+Symptom: staticfiles/assets/css/styles.css doesn't exist
+
+Cause: collectstatic didn't run or failed
+
+Solution:
+1. Check if CSS is in source:
+   ls -la /var/www/asset_tracker/assets/static/assets/css/styles.css
+
+2. If not in source, copy it:
+   sudo cp /tmp/LINUX_DEPLOYMENT_FINAL/assets/static/assets/css/styles.css \
+           /var/www/asset_tracker/assets/static/assets/css/
+
+3. Run collectstatic again:
+   cd /var/www/asset_tracker
+   source venv/bin/activate
+   python manage.py collectstatic --clear --noinput
+
+4. Verify it worked:
+   ls -la /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEM 3: CSS in staticfiles but wrong content
+═══════════════════════════════════════════════════════════════════════════════
+
+Symptom: File exists but grep "overflow-y.*auto" returns nothing
+
+Cause: Old CSS was collected
+
+Solution:
+1. Delete staticfiles completely:
+   sudo rm -rf /var/www/asset_tracker/staticfiles/assets/
+   sudo rm -rf /var/www/asset_tracker/staticfiles/admin/
+
+2. Verify source CSS is correct:
+   grep "overflow-y" /var/www/asset_tracker/assets/static/assets/css/styles.css
+
+3. If source is wrong, recopy:
+   sudo cp /tmp/LINUX_DEPLOYMENT_FINAL/assets/static/assets/css/styles.css \
+           /var/www/asset_tracker/assets/static/assets/css/
+
+4. Run collectstatic:
+   cd /var/www/asset_tracker
+   source venv/bin/activate
+   python manage.py collectstatic --clear --noinput
+
+5. Verify collected file:
+   grep "overflow-y" /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEM 4: Services won't start
+═══════════════════════════════════════════════════════════════════════════════
+
+Symptom: systemctl start fails or service is "failed"
+
+Cause: Syntax error in Python files or configuration issue
+
+Solution:
+1. Check logs:
+   sudo journalctl -u asset_tracker -n 100 --no-pager | tail -50
+
+2. Look for:
+   - "SyntaxError" → Python file has syntax error
+   - "ImportError" → Missing dependency or wrong file structure
+   - "DatabaseError" → Database connection issue
+
+3. If SyntaxError in asset_forms.py:
+   - File might be corrupted during copy
+   - Recopy from package
+   - Check file encoding (should be UTF-8)
+
+4. Test Python syntax:
+   cd /var/www/asset_tracker
+   source venv/bin/activate
+   python -c "import assets.forms.asset_forms"
+
+5. If import fails, shows which line has error
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEM 5: collectstatic says "0 files copied"
+═══════════════════════════════════════════════════════════════════════════════
+
+Symptom: collectstatic runs but copies 0 files
+
+Cause: Source static directory empty or wrong STATIC_ROOT
+
+Solution:
+1. Check source directory:
+   ls -la /var/www/asset_tracker/assets/static/assets/css/
+
+2. Should show styles.css and other files
+
+3. If empty, files were not copied:
+   sudo cp -r /tmp/LINUX_DEPLOYMENT_FINAL/assets/static/* \
+              /var/www/asset_tracker/assets/static/
+
+4. Check STATIC_ROOT setting:
+   grep STATIC_ROOT /var/www/asset_tracker/asset_tracker/settings.py
+
+5. Run collectstatic with verbose:
+   python manage.py collectstatic --noinput -v 2
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEM 6: Wrong permissions
+═══════════════════════════════════════════════════════════════════════════════
+
+Symptom: Files owned by wrong user or permission denied errors
+
+Cause: Forgot to run chown/chmod
+
+Solution:
+sudo chown -R www-data:www-data /var/www/asset_tracker/assets
+sudo chown -R www-data:www-data /var/www/asset_tracker/staticfiles
+sudo chmod -R 755 /var/www/asset_tracker/assets
+sudo chmod -R 755 /var/www/asset_tracker/staticfiles
+sudo systemctl restart asset_tracker nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEM 7: Nginx configuration issue
+═══════════════════════════════════════════════════════════════════════════════
+
+Symptom: Nginx serves 404 for static files
+
+Cause: Nginx not configured to serve from staticfiles
+
+Solution:
+1. Check Nginx config:
+   cat /etc/nginx/sites-enabled/asset_tracker | grep -A5 location
+
+2. Should have:
+   location /static/ {
+       alias /var/www/asset_tracker/staticfiles/;
+   }
+
+3. If wrong, edit config and reload:
+   sudo nano /etc/nginx/sites-enabled/asset_tracker
+   sudo nginx -t
+   sudo systemctl reload nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+COMPLETE RESET (Last Resort)
+═══════════════════════════════════════════════════════════════════════════════
+
+If nothing works, do a complete reset:
+
+1. Stop services:
+   sudo systemctl stop asset_tracker nginx
+
+2. Restore backup:
+   sudo rm -rf /var/www/asset_tracker/assets
+   sudo cp -r /var/www/asset_tracker/assets.backup.* /var/www/asset_tracker/assets
+
+3. Start services:
+   sudo systemctl start asset_tracker nginx
+
+4. Verify site works (with old bugs)
+
+5. Try deployment again from step 1, MORE CAREFULLY
+
+═══════════════════════════════════════════════════════════════════════════════
+CONTACT DEVELOPER
+═══════════════════════════════════════════════════════════════════════════════
+
+If you cannot resolve the issue:
+
+1. Run all verification checks
+2. Copy the complete output
+3. Note which check(s) failed
+4. Send to user with error messages from logs
+
+═══════════════════════════════════════════════════════════════════════════════

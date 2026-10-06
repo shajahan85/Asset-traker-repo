@@ -1,0 +1,105 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Add Scrapped System - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>Add Scrapped System</h1>
+    <a href="{% url 'scrapped_items' %}" class="btn btn-secondary">Back to Scrapped Items</a>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="form-container">
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.asset_tag.id_for_label }}">{{ form.asset_tag.label }} *</label>
+            {{ form.asset_tag }}
+            {% if form.asset_tag.errors %}
+                <div class="error-message">{{ form.asset_tag.errors.0 }}</div>
+            {% endif %}
+            {% if form.asset_tag.help_text %}
+                <small class="form-text">{{ form.asset_tag.help_text }}</small>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.system_type.id_for_label }}">{{ form.system_type.label }} *</label>
+            {{ form.system_type }}
+            {% if form.system_type.errors %}
+                <div class="error-message">{{ form.system_type.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.operating_system.id_for_label }}">{{ form.operating_system.label }} *</label>
+            {{ form.operating_system }}
+            {% if form.operating_system.errors %}
+                <div class="error-message">{{ form.operating_system.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.manufacturer.id_for_label }}">{{ form.manufacturer.label }}</label>
+            {{ form.manufacturer }}
+            {% if form.manufacturer.errors %}
+                <div class="error-message">{{ form.manufacturer.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.ip_address.id_for_label }}">{{ form.ip_address.label }}</label>
+            {{ form.ip_address }}
+            {% if form.ip_address.errors %}
+                <div class="error-message">{{ form.ip_address.errors.0 }}</div>
+            {% endif %}
+            {% if form.ip_address.help_text %}
+                <small class="form-text">{{ form.ip_address.help_text }}</small>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.manual_ip.id_for_label }}">{{ form.manual_ip.label }}</label>
+            {{ form.manual_ip }}
+            {% if form.manual_ip.errors %}
+                <div class="error-message">{{ form.manual_ip.errors.0 }}</div>
+            {% endif %}
+            {% if form.manual_ip.help_text %}
+                <small class="form-text">{{ form.manual_ip.help_text }}</small>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.scrapping_reason.id_for_label }}">{{ form.scrapping_reason.label }} *</label>
+            {{ form.scrapping_reason }}
+            {% if form.scrapping_reason.errors %}
+                <div class="error-message">{{ form.scrapping_reason.errors.0 }}</div>
+            {% endif %}
+            {% if form.scrapping_reason.help_text %}
+                <small class="form-text">{{ form.scrapping_reason.help_text }}</small>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.particulars.id_for_label }}">{{ form.particulars.label }}</label>
+            {{ form.particulars }}
+            {% if form.particulars.errors %}
+                <div class="error-message">{{ form.particulars.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Scrapped System</button>
+            <a href="{% url 'scrapped_items' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

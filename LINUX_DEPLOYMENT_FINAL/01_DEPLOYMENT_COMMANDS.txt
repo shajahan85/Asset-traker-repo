@@ -1,0 +1,144 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    DEPLOYMENT COMMANDS - RUN THESE EXACTLY
+═══════════════════════════════════════════════════════════════════════════════
+
+Copy and paste these commands ONE BY ONE.
+Check each command completes successfully before running the next.
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 1: STOP SERVICES
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl stop asset_tracker
+sudo systemctl stop nginx
+
+# Verify both stopped:
+systemctl is-active asset_tracker
+systemctl is-active nginx
+
+# Both should show "inactive"
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 2: BACKUP CURRENT FILES (SAFETY)
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo cp -r /var/www/asset_tracker/assets /var/www/asset_tracker/assets.backup.$(date +%Y%m%d_%H%M)
+
+# Verify backup created:
+ls -la /var/www/asset_tracker/ | grep backup
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 3: COPY ALL FILES FROM PACKAGE
+═══════════════════════════════════════════════════════════════════════════════
+
+# Go to the upload location (adjust if different)
+cd /tmp/LINUX_DEPLOYMENT_FINAL
+
+# Copy ALL files at once:
+sudo cp -r assets/* /var/www/asset_tracker/assets/
+
+# This copies all 13 files in correct structure
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 4: VERIFY BUG FIX FILE WAS COPIED
+═══════════════════════════════════════════════════════════════════════════════
+
+grep -n "limit=30" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+# MUST show this line:
+# 10:def get_filtered_free_ips(include_current_ip_id=None, limit=30):
+
+# If you see NOTHING, the file was NOT copied!
+# Check the path and try again.
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 5: VERIFY CSS FILE WAS COPIED
+═══════════════════════════════════════════════════════════════════════════════
+
+grep -n "overflow-y.*auto" /var/www/asset_tracker/assets/static/assets/css/styles.css
+
+# MUST show a line with: overflow-y: auto;
+
+# If you see NOTHING, the file was NOT copied!
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 6: SET PERMISSIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo chown -R www-data:www-data /var/www/asset_tracker/assets
+sudo chmod -R 755 /var/www/asset_tracker/assets
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 7: DELETE OLD STATICFILES
+═══════════════════════════════════════════════════════════════════════════════
+
+# Delete old collected static files completely
+sudo rm -rf /var/www/asset_tracker/staticfiles/assets/
+sudo rm -rf /var/www/asset_tracker/staticfiles/admin/
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 8: RUN COLLECTSTATIC (CRITICAL!)
+═══════════════════════════════════════════════════════════════════════════════
+
+cd /var/www/asset_tracker
+source venv/bin/activate
+python manage.py collectstatic --clear --noinput
+
+# WATCH THE OUTPUT!
+# You should see: "X static files copied to '/var/www/asset_tracker/staticfiles'"
+# If you see "0 files copied", something is wrong!
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 9: VERIFY CSS WAS COLLECTED
+═══════════════════════════════════════════════════════════════════════════════
+
+# Check file exists:
+ls -lh /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+# Check file date (should be TODAY):
+stat /var/www/asset_tracker/staticfiles/assets/css/styles.css | grep Modify
+
+# Check file content:
+grep "overflow-y.*auto" /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+# MUST show: overflow-y: auto;
+# If NOT, collectstatic copied old file!
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 10: START SERVICES
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl start asset_tracker
+sudo systemctl start nginx
+
+# Wait 3 seconds for services to start
+sleep 3
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 11: VERIFY SERVICES STARTED
+═══════════════════════════════════════════════════════════════════════════════
+
+systemctl is-active asset_tracker
+systemctl is-active nginx
+
+# Both MUST show "active"
+
+# Check for errors:
+sudo journalctl -u asset_tracker -n 20 --no-pager
+
+# Should show no ERROR lines
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 12: CLEAR NGINX CACHE (if exists)
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo rm -rf /var/cache/nginx/*
+sudo systemctl reload nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ DEPLOYMENT COMPLETE!
+═══════════════════════════════════════════════════════════════════════════════
+
+Next: Open 02_VERIFICATION.txt and run verification commands
+
+═══════════════════════════════════════════════════════════════════════════════

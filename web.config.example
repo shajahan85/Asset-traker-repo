@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Asset Tracker - IIS Configuration Example
+    
+    Rename this file to web.config and update paths as needed.
+    
+    Prerequisites:
+    - HttpPlatformHandler installed (https://www.iis.net/downloads/microsoft/httpplatformhandler)
+    - Python installed
+    - Virtual environment created in project directory
+    - waitress installed: pip install waitress
+-->
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="httpPlatformHandler" 
+           path="*" 
+           verb="*" 
+           modules="httpPlatformHandler" 
+           resourceType="Unspecified" />
+    </handlers>
+    
+    <httpPlatform processPath="C:\inetpub\wwwroot\asset-tracker\venv\Scripts\python.exe"
+                  arguments="-m waitress --listen=*:8000 asset_tracker.wsgi:application"
+                  stdoutLogEnabled="true"
+                  stdoutLogFile="C:\inetpub\wwwroot\asset-tracker\logs\stdout.log"
+                  startupTimeLimit="60"
+                  requestTimeout="00:04:00"
+                  forwardWindowsAuthToken="false">
+      <environmentVariables>
+        <environmentVariable name="PYTHONUNBUFFERED" value="1" />
+        <environmentVariable name="PYTHONIOENCODING" value="UTF-8" />
+      </environmentVariables>
+    </httpPlatform>
+    
+    <!-- Security headers -->
+    <httpProtocol>
+      <customHeaders>
+        <add name="X-Content-Type-Options" value="nosniff" />
+        <add name="X-Frame-Options" value="SAMEORIGIN" />
+        <add name="X-XSS-Protection" value="1; mode=block" />
+      </customHeaders>
+    </httpProtocol>
+    
+    <!-- URL Rewrite rules (optional) -->
+    <!-- Uncomment if you want to enforce HTTPS -->
+    <!--
+    <rewrite>
+      <rules>
+        <rule name="Redirect to HTTPS" stopProcessing="true">
+          <match url="(.*)" />
+          <conditions>
+            <add input="{HTTPS}" pattern="^OFF$" />
+          </conditions>
+          <action type="Redirect" url="https://{HTTP_HOST}/{R:1}" redirectType="Permanent" />
+        </rule>
+      </rules>
+    </rewrite>
+    -->
+    
+    <!-- Static file handling -->
+    <staticContent>
+      <mimeMap fileExtension=".json" mimeType="application/json" />
+      <mimeMap fileExtension=".woff" mimeType="application/font-woff" />
+      <mimeMap fileExtension=".woff2" mimeType="application/font-woff2" />
+    </staticContent>
+    
+    <!-- Error handling -->
+    <httpErrors errorMode="Detailed" />
+    
+    <!-- Security -->
+    <security>
+      <requestFiltering>
+        <!-- Limit file upload size to 100MB -->
+        <requestLimits maxAllowedContentLength="104857600" />
+      </requestFiltering>
+    </security>
+    
+  </system.webServer>
+</configuration>

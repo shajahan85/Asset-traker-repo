@@ -1,0 +1,54 @@
+# ===========================================
+# Asset Tracker - Production Requirements
+# ===========================================
+
+# Django and core dependencies
+Django>=4.2,<5.0
+python-decouple>=3.8
+djangorestframework>=3.14.0
+
+# Database drivers
+psycopg2-binary>=2.9.0  # PostgreSQL
+# pyodbc>=4.0.39  # Uncomment for SQL Server
+
+# Task scheduling
+celery>=5.3.0
+redis>=4.6.0
+
+# File handling
+Pillow>=10.0.0
+openpyxl>=3.1.2
+
+# Production WSGI server for IIS
+wfastcgi>=3.0.0
+waitress>=2.1.2
+
+# Security
+cryptography>=41.0.0
+
+# Performance and monitoring
+django-redis>=5.3.0  # Redis cache backend
+
+# Additional production dependencies
+gunicorn>=21.2.0  # Alternative WSGI server (optional)
+whitenoise>=6.5.0  # Efficient static file serving (optional)
+
+# Logging and monitoring
+sentry-sdk>=1.31.0  # Error tracking (optional)
+
+# ===========================================
+# Installation Instructions
+# ===========================================
+#
+# 1. Activate virtual environment:
+#    .\venv\Scripts\Activate.ps1
+#
+# 2. Install requirements:
+#    pip install -r requirements_production.txt
+#
+# 3. Install wfastcgi:
+#    pip install wfastcgi
+#
+# 4. Enable wfastcgi:
+#    wfastcgi-enable
+#

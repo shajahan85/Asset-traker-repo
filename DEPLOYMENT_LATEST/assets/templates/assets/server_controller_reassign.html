@@ -1,0 +1,82 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Reassign Server Controller - Asset Tracker{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <h1>Reassign Server Controller</h1>
+    <p class="text-muted">Reassign freed server controller to a new user</p>
+    
+    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
+        <strong>Asset Tag:</strong> {{ asset.asset_tag }}<br>
+        <strong>IP Address:</strong> {{ asset.get_ip_address_string }}<br>
+        <strong>System Type:</strong> {{ asset.system_type }}<br>
+        <strong>Freed Date:</strong> {{ asset.freed_date|date:"Y-m-d H:i" }}
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="assigned_to">Assigned To: <span style="color: red;">*</span></label>
+            <input type="text" 
+                   id="assigned_to" 
+                   name="assigned_to" 
+                   required 
+                   placeholder="Enter user name"
+                   style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        
+        <div class="form-group">
+            <label for="team">Team: <span style="color: red;">*</span></label>
+            <select id="team" 
+                    name="team" 
+                    required
+                    style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;">
+                <option value="">-- Select Team --</option>
+                {% for team in teams %}
+                <option value="{{ team.id }}">
+                    {% if team.parent %}{{ team.parent.name }} > {% endif %}{{ team.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">Notes (Optional):</label>
+            <textarea id="notes" 
+                      name="notes" 
+                      rows="4"
+                      placeholder="Any additional notes..."
+                      style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+                Reassign Server Controller
+            </button>
+            <a href="{% url 'server_controller_list' %}?tab=freed" class="btn btn-secondary" style="flex: 1;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.text-muted {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+</style>
+{% endblock %}

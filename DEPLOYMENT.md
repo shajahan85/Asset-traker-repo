@@ -1,696 +1,477 @@
-# Deployment Guide
+# Asset Tracker - Test Server Deployment Guide
 
-This guide provides step-by-step instructions for deploying the Asset Tracker Django application to production.
-
-## Table of Contents
-
-1. [Prerequisites](#prerequisites)
-2. [Environment Configuration](#environment-configuration)
-3. [Security Settings](#security-settings)
-4. [Database Setup](#database-setup)
-5. [Static Files](#static-files)
-6. [Email Configuration](#email-configuration)
-7. [Initial Data Setup](#initial-data-setup)
-8. [Production Server Setup](#production-server-setup)
-9. [Post-Deployment Checklist](#post-deployment-checklist)
-10. [Troubleshooting](#troubleshooting)
-
----
+This guide covers deploying the Asset Tracker application to a Windows test server.
 
 ## Prerequisites
 
-Before deploying, ensure you have:
+- Windows Server (2016 or later recommended)
+- Python 3.11+ installed
+- PostgreSQL or use SQLite for testing
+- Admin access to the server
+- Network access to the server
 
-- Python 3.10 or higher
-- PostgreSQL or MySQL database (recommended for production)
-- Web server (Nginx or Apache)
-- WSGI server (Gunicorn or uWSGI)
-- SSL certificate for HTTPS
-- SMTP server for email functionality
-- Domain name configured
+## Deployment Options
 
----
-
-## Environment Configuration
-
-### 1. Create Environment File
-
-Copy the example environment file and configure it for production:
-
-```bash
-cp .env.example .env
-```
-
-### 2. Configure Environment Variables
-
-Edit `.env` file with production values:
-
-```bash
-# Django Settings
-SECRET_KEY=your-very-long-random-secret-key-here-change-this
-DEBUG=False
-ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
-
-# Database Configuration (PostgreSQL example)
-DATABASE_ENGINE=django.db.backends.postgresql
-DATABASE_NAME=assettracker_db
-DATABASE_USER=assettracker_user
-DATABASE_PASSWORD=strong-database-password
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-
-# Security Settings (MUST be True in production)
-SESSION_COOKIE_SECURE=True
-CSRF_COOKIE_SECURE=True
-SECURE_SSL_REDIRECT=True
-SECURE_HSTS_SECONDS=31536000
-
-# Session Configuration
-SESSION_COOKIE_AGE=1209600
-SESSION_EXPIRE_AT_BROWSER_CLOSE=False
-
-# Email Configuration (SMTP example)
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-specific-password
-DEFAULT_FROM_EMAIL=noreply@yourdomain.com
-
-# Password Reset
-PASSWORD_RESET_TIMEOUT=3600
-```
-
-### 3. Generate Secret Key
-
-Generate a new secret key for production:
-
-```python
-python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-```
-
-Copy the output and set it as `SECRET_KEY` in your `.env` file.
+### Option A: Quick Test Deployment (SQLite - Simple)
+### Option B: Production-like Deployment (PostgreSQL + IIS - Recommended for test server)
 
 ---
 
-## Security Settings
+## Option A: Quick Test Deployment (SQLite)
 
-### Critical Security Checklist
+### 1. Prepare the Server
 
-Ensure these settings are configured in your `.env` file:
+1. **Install Python 3.11+**
+   ```powershell
+   # Download from python.org and install
+   # Make sure to check "Add Python to PATH" during installation
+   ```
 
-- ✅ `DEBUG=False` - Never run with DEBUG=True in production
-- ✅ `SECRET_KEY` - Use a unique, random secret key
-- ✅ `ALLOWED_HOSTS` - Set to your domain(s)
-- ✅ `SESSION_COOKIE_SECURE=True` - Requires HTTPS
-- ✅ `CSRF_COOKIE_SECURE=True` - Requires HTTPS
-- ✅ `SECURE_SSL_REDIRECT=True` - Redirect HTTP to HTTPS
-- ✅ `SECURE_HSTS_SECONDS=31536000` - Enable HSTS for 1 year
+2. **Install Git** (if copying via Git)
+   ```powershell
+   # Download from git-scm.com and install
+   ```
 
-### Password Security
+### 2. Copy Project Files
 
-The application uses Django's PBKDF2 password hasher by default, which is secure and recommended. The configuration in `settings.py` includes:
-
-```python
-PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
-    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
-    'django.contrib.auth.hashers.Argon2PasswordHasher',
-    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
-]
+**Method 1: Using Git**
+```powershell
+cd C:\inetpub\wwwroot
+git clone <your-repo-url> asset-tracker
+cd asset-tracker
 ```
 
-Password validation enforces:
-- Minimum length of 8 characters
-- Not too similar to user attributes
-- Not a commonly used password
-- Not entirely numeric
+**Method 2: Manual Copy**
+- Copy your entire project folder to `C:\inetpub\wwwroot\asset-tracker`
+- Exclude: `.git`, `__pycache__`, `.hypothesis`, `*.pyc`, `db.sqlite3`
 
----
+### 3. Set Up Virtual Environment
 
-## Database Setup
+```powershell
+cd C:\inetpub\wwwroot\asset-tracker
 
-### PostgreSQL (Recommended)
+# Create virtual environment
+python -m venv venv
 
-1. **Install PostgreSQL**:
-   ```bash
-   sudo apt-get install postgresql postgresql-contrib
-   ```
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
 
-2. **Create Database and User**:
-   ```bash
-   sudo -u postgres psql
-   ```
-   
-   ```sql
-   CREATE DATABASE assettracker_db;
-   CREATE USER assettracker_user WITH PASSWORD 'strong-database-password';
-   ALTER ROLE assettracker_user SET client_encoding TO 'utf8';
-   ALTER ROLE assettracker_user SET default_transaction_isolation TO 'read committed';
-   ALTER ROLE assettracker_user SET timezone TO 'UTC';
-   GRANT ALL PRIVILEGES ON DATABASE assettracker_db TO assettracker_user;
-   \q
-   ```
-
-3. **Install PostgreSQL Python Adapter**:
-   ```bash
-   pip install psycopg2-binary
-   ```
-
-4. **Update .env**:
-   ```bash
-   DATABASE_ENGINE=django.db.backends.postgresql
-   DATABASE_NAME=assettracker_db
-   DATABASE_USER=assettracker_user
-   DATABASE_PASSWORD=strong-database-password
-   DATABASE_HOST=localhost
-   DATABASE_PORT=5432
-   ```
-
-### MySQL (Alternative)
-
-1. **Install MySQL**:
-   ```bash
-   sudo apt-get install mysql-server
-   ```
-
-2. **Create Database and User**:
-   ```bash
-   sudo mysql
-   ```
-   
-   ```sql
-   CREATE DATABASE assettracker_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'assettracker_user'@'localhost' IDENTIFIED BY 'strong-database-password';
-   GRANT ALL PRIVILEGES ON assettracker_db.* TO 'assettracker_user'@'localhost';
-   FLUSH PRIVILEGES;
-   EXIT;
-   ```
-
-3. **Install MySQL Python Adapter**:
-   ```bash
-   pip install mysqlclient
-   ```
-
-4. **Update .env**:
-   ```bash
-   DATABASE_ENGINE=django.db.backends.mysql
-   DATABASE_NAME=assettracker_db
-   DATABASE_USER=assettracker_user
-   DATABASE_PASSWORD=strong-database-password
-   DATABASE_HOST=localhost
-   DATABASE_PORT=3306
-   ```
-
----
-
-## Static Files
-
-### 1. Configure Static Files Settings
-
-Add to `settings.py` (if not already present):
-
-```python
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATIC_URL = '/static/'
+# If you get execution policy error, run:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-### 2. Collect Static Files
+### 4. Install Dependencies
 
-```bash
-python manage.py collectstatic --noinput
-```
+```powershell
+# Upgrade pip
+python -m pip install --upgrade pip
 
-### 3. Configure Web Server
-
-**Nginx Example**:
-
-```nginx
-location /static/ {
-    alias /path/to/your/project/staticfiles/;
-}
-```
-
----
-
-## Email Configuration
-
-### Gmail SMTP (Development/Small Scale)
-
-1. **Enable 2-Factor Authentication** on your Gmail account
-2. **Generate App Password**: Google Account → Security → App passwords
-3. **Configure .env**:
-   ```bash
-   EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-   EMAIL_HOST=smtp.gmail.com
-   EMAIL_PORT=587
-   EMAIL_USE_TLS=True
-   EMAIL_HOST_USER=your-email@gmail.com
-   EMAIL_HOST_PASSWORD=your-16-char-app-password
-   DEFAULT_FROM_EMAIL=noreply@yourdomain.com
-   ```
-
-### SendGrid (Production Recommended)
-
-1. **Sign up for SendGrid** and get API key
-2. **Install SendGrid**:
-   ```bash
-   pip install sendgrid
-   ```
-3. **Configure .env**:
-   ```bash
-   EMAIL_BACKEND=sendgrid_backend.SendgridBackend
-   SENDGRID_API_KEY=your-sendgrid-api-key
-   DEFAULT_FROM_EMAIL=noreply@yourdomain.com
-   ```
-
-### AWS SES (Enterprise)
-
-1. **Configure AWS SES** and verify domain
-2. **Install boto3**:
-   ```bash
-   pip install boto3
-   ```
-3. **Configure .env**:
-   ```bash
-   EMAIL_BACKEND=django_ses.SESBackend
-   AWS_ACCESS_KEY_ID=your-access-key
-   AWS_SECRET_ACCESS_KEY=your-secret-key
-   AWS_SES_REGION_NAME=us-east-1
-   DEFAULT_FROM_EMAIL=noreply@yourdomain.com
-   ```
-
----
-
-## Initial Data Setup
-
-### 1. Install Dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-**Note**: The requirements include `openpyxl>=3.1.2` for Excel import/export functionality.
+### 5. Configure Environment Variables
 
-### 2. Run Migrations
+Create `.env` file in project root:
 
-```bash
+```env
+# Django Settings
+SECRET_KEY=your-secret-key-here-change-this-in-production
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1,your-server-ip,your-server-hostname
+
+# Database (SQLite for testing)
+DATABASE_ENGINE=django.db.backends.sqlite3
+DATABASE_NAME=db.sqlite3
+
+# Session Settings
+SESSION_COOKIE_AGE=86400
+SESSION_EXPIRE_AT_BROWSER_CLOSE=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+
+# Security Settings (Keep False for test server without HTTPS)
+SECURE_SSL_REDIRECT=False
+SECURE_HSTS_SECONDS=0
+
+# Email Settings (Console backend for testing)
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+
+# Celery Settings (Optional for testing)
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+```
+
+**Generate a Secret Key:**
+```powershell
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+### 6. Initialize Database
+
+```powershell
+# Apply migrations
 python manage.py migrate
-```
 
-This will:
-- Create all database tables
-- Run the initial data migration to create default roles (Admin, Manager, User)
-
-### 3. Create Superuser
-
-```bash
+# Create superuser
 python manage.py createsuperuser
+# Follow prompts to create admin user
+
+# Collect static files
+python manage.py collectstatic --noinput
 ```
 
-Follow the prompts to create an admin account.
+### 7. Create Required Directories
 
-### 4. Verify Default Roles
-
-Log into Django admin and verify that the following roles exist:
-- **Admin**: Full access to user and role management
-- **Manager**: Can view users and manage assets
-- **User**: Basic user access
-
-### 5. Set Up Excel Import Template (Optional)
-
-The system includes a sample Excel import template. Ensure the `media/templates/` directory exists:
-
-```bash
-mkdir -p media/templates
+```powershell
+# Create media directories
+New-Item -ItemType Directory -Force -Path "media\asset_attachments"
+New-Item -ItemType Directory -Force -Path "media\templates"
 ```
 
-The sample template will be available for download from the import page.
+### 8. Run Test Server
 
----
-
-## Production Server Setup
-
-### Option 1: Gunicorn + Nginx
-
-#### 1. Install Gunicorn
-
-```bash
-pip install gunicorn
+```powershell
+# Run on all interfaces so other machines can access
+python manage.py runserver 0.0.0.0:8000
 ```
 
-#### 2. Create Gunicorn Service
+**Access the application:**
+- Local: `http://localhost:8000`
+- Network: `http://your-server-ip:8000`
 
-Create `/etc/systemd/system/assettracker.service`:
+### 9. Configure Windows Firewall
 
-```ini
-[Unit]
-Description=Asset Tracker Gunicorn daemon
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=/path/to/your/project
-Environment="PATH=/path/to/your/venv/bin"
-ExecStart=/path/to/your/venv/bin/gunicorn \
-          --workers 3 \
-          --bind unix:/path/to/your/project/assettracker.sock \
-          asset_tracker.wsgi:application
-
-[Install]
-WantedBy=multi-user.target
-```
-
-#### 3. Start Gunicorn
-
-```bash
-sudo systemctl start assettracker
-sudo systemctl enable assettracker
-```
-
-#### 4. Configure Nginx
-
-Create `/etc/nginx/sites-available/assettracker`:
-
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com www.yourdomain.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name yourdomain.com www.yourdomain.com;
-
-    ssl_certificate /path/to/ssl/cert.pem;
-    ssl_certificate_key /path/to/ssl/key.pem;
-
-    location = /favicon.ico { access_log off; log_not_found off; }
-    
-    location /static/ {
-        alias /path/to/your/project/staticfiles/;
-    }
-
-    location / {
-        include proxy_params;
-        proxy_pass http://unix:/path/to/your/project/assettracker.sock;
-    }
-}
-```
-
-#### 5. Enable Site and Restart Nginx
-
-```bash
-sudo ln -s /etc/nginx/sites-available/assettracker /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-### Option 2: Docker Deployment
-
-#### 1. Create Dockerfile
-
-```dockerfile
-FROM python:3.11-slim
-
-ENV PYTHONUNBUFFERED=1
-
-WORKDIR /app
-
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . /app/
-
-RUN python manage.py collectstatic --noinput
-
-EXPOSE 8000
-
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "asset_tracker.wsgi:application"]
-```
-
-#### 2. Create docker-compose.yml
-
-```yaml
-version: '3.8'
-
-services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: assettracker_db
-      POSTGRES_USER: assettracker_user
-      POSTGRES_PASSWORD: strong-database-password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  web:
-    build: .
-    command: gunicorn asset_tracker.wsgi:application --bind 0.0.0.0:8000
-    volumes:
-      - .:/app
-      - static_volume:/app/staticfiles
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    depends_on:
-      - db
-
-  nginx:
-    image: nginx:latest
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - static_volume:/app/staticfiles
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - web
-
-volumes:
-  postgres_data:
-  static_volume:
-```
-
-#### 3. Deploy
-
-```bash
-docker-compose up -d
-docker-compose exec web python manage.py migrate
-docker-compose exec web python manage.py createsuperuser
+```powershell
+# Allow port 8000 through firewall
+New-NetFirewallRule -DisplayName "Django Test Server" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
 ```
 
 ---
 
-## Post-Deployment Checklist
+## Option B: Production-like Deployment (IIS + PostgreSQL)
 
-After deployment, verify the following:
+### 1. Install Prerequisites
 
-### Security Verification
+1. **Install Python 3.11+**
+2. **Install PostgreSQL**
+   - Download from postgresql.org
+   - Note down database credentials
 
-- [ ] `DEBUG=False` in production
-- [ ] Unique `SECRET_KEY` set
-- [ ] `ALLOWED_HOSTS` configured correctly
-- [ ] HTTPS enabled and working
-- [ ] SSL certificate valid
-- [ ] HSTS headers present
-- [ ] Session cookies secure
-- [ ] CSRF cookies secure
+3. **Install IIS**
+   ```powershell
+   # Open PowerShell as Administrator
+   Install-WindowsFeature -name Web-Server -IncludeManagementTools
+   ```
 
-### Functionality Verification
+4. **Install HttpPlatformHandler** for IIS
+   - Download from: https://www.iis.net/downloads/microsoft/httpplatformhandler
 
-- [ ] Can access login page
-- [ ] Can log in with superuser account
-- [ ] Can create new users
-- [ ] Can assign roles to users
-- [ ] Password reset emails sending
-- [ ] Static files loading correctly
-- [ ] All pages accessible
-- [ ] Permission checks working
-- [ ] Excel import page accessible (admin only)
-- [ ] Excel export buttons visible (all authenticated users)
-- [ ] Asset filtering working correctly
-- [ ] Sample import template downloadable
+5. **Install Redis** (Optional, for Celery)
+   - Download from: https://github.com/microsoftarchive/redis/releases
 
-### Database Verification
+### 2. Set Up PostgreSQL Database
 
-- [ ] Database migrations applied
-- [ ] Default roles created (Admin, Manager, User)
-- [ ] Superuser account created
-- [ ] Database backups configured
+```sql
+-- Connect to PostgreSQL as postgres user
+CREATE DATABASE asset_tracker;
+CREATE USER asset_tracker_user WITH PASSWORD 'your_secure_password';
+ALTER ROLE asset_tracker_user SET client_encoding TO 'utf8';
+ALTER ROLE asset_tracker_user SET default_transaction_isolation TO 'read committed';
+ALTER ROLE asset_tracker_user SET timezone TO 'UTC';
+GRANT ALL PRIVILEGES ON DATABASE asset_tracker TO asset_tracker_user;
+```
 
-### Monitoring Setup
+### 3. Configure Environment Variables
 
-- [ ] Error logging configured
-- [ ] Authentication failure logging working
-- [ ] Server monitoring in place
-- [ ] Database monitoring in place
-- [ ] Backup strategy implemented
+Update `.env` file:
+
+```env
+# Django Settings
+SECRET_KEY=your-generated-secret-key
+DEBUG=False
+ALLOWED_HOSTS=your-server-ip,your-domain.com,localhost
+
+# Database (PostgreSQL)
+DATABASE_ENGINE=django.db.backends.postgresql
+DATABASE_NAME=asset_tracker
+DATABASE_USER=asset_tracker_user
+DATABASE_PASSWORD=your_secure_password
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+
+# Session Settings
+SESSION_COOKIE_AGE=86400
+SESSION_EXPIRE_AT_BROWSER_CLOSE=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+
+# Security Settings
+SECURE_SSL_REDIRECT=False
+SECURE_HSTS_SECONDS=0
+
+# Email Settings
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+
+# Celery
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+```
+
+### 4. Install Dependencies & Initialize
+
+```powershell
+cd C:\inetpub\wwwroot\asset-tracker
+.\venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
+pip install waitress  # WSGI server for Windows
+
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py collectstatic --noinput
+```
+
+### 5. Create IIS Configuration
+
+Create `web.config` in project root:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="httpPlatformHandler" path="*" verb="*" 
+           modules="httpPlatformHandler" resourceType="Unspecified" />
+    </handlers>
+    <httpPlatform processPath="C:\inetpub\wwwroot\asset-tracker\venv\Scripts\python.exe"
+                  arguments="C:\inetpub\wwwroot\asset-tracker\venv\Scripts\waitress-serve.exe --listen=*:8000 asset_tracker.wsgi:application"
+                  stdoutLogEnabled="true"
+                  stdoutLogFile="C:\inetpub\wwwroot\asset-tracker\logs\stdout.log"
+                  startupTimeLimit="60"
+                  requestTimeout="00:04:00">
+      <environmentVariables>
+        <environmentVariable name="PYTHONUNBUFFERED" value="1" />
+      </environmentVariables>
+    </httpPlatform>
+  </system.webServer>
+</configuration>
+```
+
+### 6. Create Logs Directory
+
+```powershell
+New-Item -ItemType Directory -Force -Path "logs"
+```
+
+### 7. Configure IIS Site
+
+```powershell
+# Import IIS module
+Import-Module WebAdministration
+
+# Create application pool
+New-WebAppPool -Name "AssetTrackerPool"
+
+# Configure application pool
+Set-ItemProperty IIS:\AppPools\AssetTrackerPool -name "managedRuntimeVersion" -value ""
+
+# Create website
+New-Website -Name "AssetTracker" `
+            -Port 80 `
+            -PhysicalPath "C:\inetpub\wwwroot\asset-tracker" `
+            -ApplicationPool "AssetTrackerPool"
+
+# Start website
+Start-Website -Name "AssetTracker"
+```
+
+### 8. Set Permissions
+
+```powershell
+# Give IIS_IUSRS permission to project folder
+icacls "C:\inetpub\wwwroot\asset-tracker" /grant "IIS_IUSRS:(OI)(CI)F" /T
+
+# Give permission to media folder
+icacls "C:\inetpub\wwwroot\asset-tracker\media" /grant "IIS_IUSRS:(OI)(CI)F" /T
+
+# Give permission to logs folder
+icacls "C:\inetpub\wwwroot\asset-tracker\logs" /grant "IIS_IUSRS:(OI)(CI)F" /T
+```
+
+---
+
+## Post-Deployment Tasks
+
+### 1. Test the Application
+
+- Access admin panel: `http://your-server/admin/`
+- Login with superuser credentials
+- Test key features:
+  - Create an asset
+  - Upload an attachment
+  - Import Excel file
+  - Export data
+
+### 2. Set Up Celery (Optional)
+
+For background tasks (warranty notifications, power monitoring):
+
+**Create `run_celery.bat`:**
+```batch
+@echo off
+cd C:\inetpub\wwwroot\asset-tracker
+call venv\Scripts\activate.bat
+celery -A asset_tracker worker -l info --pool=solo
+```
+
+**Create `run_celery_beat.bat`:**
+```batch
+@echo off
+cd C:\inetpub\wwwroot\asset-tracker
+call venv\Scripts\activate.bat
+celery -A asset_tracker beat -l info
+```
+
+**Run as Windows Service** (using NSSM):
+```powershell
+# Download NSSM from nssm.cc
+nssm install CeleryWorker "C:\inetpub\wwwroot\asset-tracker\run_celery.bat"
+nssm install CeleryBeat "C:\inetpub\wwwroot\asset-tracker\run_celery_beat.bat"
+
+nssm start CeleryWorker
+nssm start CeleryBeat
+```
+
+### 3. Set Up Backup
+
+**Create `backup_database.ps1`:**
+```powershell
+$backupDir = "C:\Backups\AssetTracker"
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+
+# Create backup directory
+New-Item -ItemType Directory -Force -Path $backupDir
+
+# For SQLite
+Copy-Item "C:\inetpub\wwwroot\asset-tracker\db.sqlite3" `
+          "$backupDir\db_backup_$timestamp.sqlite3"
+
+# For PostgreSQL
+# pg_dump -U asset_tracker_user -d asset_tracker > "$backupDir\db_backup_$timestamp.sql"
+
+# Backup media files
+Compress-Archive -Path "C:\inetpub\wwwroot\asset-tracker\media" `
+                 -DestinationPath "$backupDir\media_backup_$timestamp.zip"
+
+Write-Host "Backup completed: $timestamp"
+```
+
+**Schedule with Task Scheduler:**
+```powershell
+$action = New-ScheduledTaskAction -Execute 'Powershell.exe' `
+  -Argument '-File "C:\inetpub\wwwroot\asset-tracker\backup_database.ps1"'
+
+$trigger = New-ScheduledTaskTrigger -Daily -At 2am
+
+Register-ScheduledTask -Action $action -Trigger $trigger `
+  -TaskName "AssetTracker Backup" -Description "Daily backup of Asset Tracker"
+```
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+### Issue: Can't access from other machines
+**Solution:**
+```powershell
+# Check firewall
+Get-NetFirewallRule | Where-Object DisplayName -like "*Django*"
 
-#### 1. Static Files Not Loading
-
-**Problem**: CSS/JS files return 404
-
-**Solution**:
-```bash
-python manage.py collectstatic --noinput
+# Add rule if missing
+New-NetFirewallRule -DisplayName "Django/IIS" -Direction Inbound -LocalPort 8000,80 -Protocol TCP -Action Allow
 ```
 
-Verify Nginx/Apache configuration for static files.
+### Issue: Static files not loading
+**Solution:**
+```powershell
+python manage.py collectstatic --noinput
+# Verify STATIC_ROOT in settings.py
+```
 
-#### 2. Database Connection Errors
+### Issue: Database connection errors
+**Solution:**
+- Check PostgreSQL service is running
+- Verify credentials in `.env`
+- Test connection: `psql -U asset_tracker_user -d asset_tracker`
 
-**Problem**: Can't connect to database
-
-**Solution**:
-- Verify database credentials in `.env`
-- Check database service is running
-- Verify database user has correct permissions
-- Check firewall rules
-
-#### 3. Email Not Sending
-
-**Problem**: Password reset emails not arriving
-
-**Solution**:
-- Verify SMTP credentials in `.env`
-- Check email backend configuration
-- Test with console backend first:
-  ```bash
-  EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
-  ```
-- Check spam folder
-- Verify SMTP server allows connections
-
-#### 4. Permission Denied Errors
-
-**Problem**: 403 errors when accessing pages
-
-**Solution**:
-- Verify user has correct role assigned
-- Check role has required permissions
-- Review permission checks in views
-- Check authentication middleware is active
-
-#### 5. Session Issues
-
-**Problem**: Users logged out unexpectedly
-
-**Solution**:
-- Verify `SESSION_COOKIE_AGE` setting
-- Check `SESSION_EXPIRE_AT_BROWSER_CLOSE` setting
-- Ensure session backend is working
-- Check for session cleanup tasks
-
-#### 6. Excel Import Not Working
-
-**Problem**: Import page returns errors or file upload fails
-
-**Solution**:
-- Verify `openpyxl` is installed: `pip install openpyxl>=3.1.2`
-- Check file size is under 10MB
-- Verify file format is .xlsx or .xls
-- Check `media/templates/` directory exists and is writable
-- Review import error messages for specific validation issues
-- Ensure Operating Systems and Teams exist before importing
-
-#### 7. Excel Export Not Downloading
-
-**Problem**: Export button doesn't trigger download
-
-**Solution**:
-- Verify user is authenticated
-- Check browser console for JavaScript errors
-- Verify export view URLs are configured correctly
-- Check that `openpyxl` is installed
-- Review server logs for errors during export generation
-
-#### 8. Asset Filters Not Working
-
-**Problem**: Filters don't narrow down results
-
-**Solution**:
-- Verify "Apply Filters" button is clicked
-- Check that filter form is submitting correctly
-- Review browser console for JavaScript errors
-- Verify FilterService is properly configured
-- Check database indexes on filtered fields
-
-### Logs
-
-Check application logs for errors:
-
-```bash
-# Application log
-tail -f authentication.log
-
-# Gunicorn log
-sudo journalctl -u assettracker -f
-
-# Nginx error log
-sudo tail -f /var/log/nginx/error.log
+### Issue: Permission denied errors
+**Solution:**
+```powershell
+# Reset permissions
+icacls "C:\inetpub\wwwroot\asset-tracker" /grant "IIS_IUSRS:(OI)(CI)F" /T
 ```
 
 ---
 
-## Maintenance
+## Security Checklist for Test Server
 
-### Regular Tasks
+- [ ] Changed SECRET_KEY from default
+- [ ] Set DEBUG=False in production-like environment
+- [ ] Configured ALLOWED_HOSTS properly
+- [ ] Set strong database password
+- [ ] Created admin user with strong password
+- [ ] Configured firewall rules
+- [ ] Set up regular backups
+- [ ] Reviewed file permissions
+- [ ] Tested all critical features
 
-1. **Database Backups**:
-   ```bash
-   # PostgreSQL
-   pg_dump assettracker_db > backup_$(date +%Y%m%d).sql
-   
-   # MySQL
-   mysqldump -u assettracker_user -p assettracker_db > backup_$(date +%Y%m%d).sql
-   ```
+---
 
-2. **Clear Expired Sessions**:
-   ```bash
-   python manage.py clearsessions
-   ```
+## Monitoring & Maintenance
 
-3. **Update Dependencies**:
-   ```bash
-   pip install --upgrade -r requirements.txt
-   python manage.py migrate
-   ```
+### Check Logs
+```powershell
+# IIS logs
+Get-Content "C:\inetpub\wwwroot\asset-tracker\logs\stdout.log" -Tail 50
 
-4. **Monitor Logs**:
-   - Review authentication failures
-   - Check for unusual activity
-   - Monitor error rates
+# Django logs
+Get-Content "C:\inetpub\wwwroot\asset-tracker\authentication.log" -Tail 50
+```
 
-### Security Updates
+### Update Application
+```powershell
+cd C:\inetpub\wwwroot\asset-tracker
 
-- Keep Django and dependencies updated
-- Monitor security advisories
-- Review and rotate credentials regularly
-- Audit user permissions periodically
+# Backup first!
+.\backup_database.ps1
+
+# Pull changes (if using Git)
+git pull
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# Update dependencies
+pip install -r requirements.txt --upgrade
+
+# Apply migrations
+python manage.py migrate
+
+# Collect static files
+python manage.py collectstatic --noinput
+
+# Restart IIS site
+Restart-WebAppPool -Name "AssetTrackerPool"
+```
 
 ---
 
 ## Support
 
 For issues or questions:
-- Check Django documentation: https://docs.djangoproject.com/
-- Review application logs
-- Contact system administrator
+1. Check logs in `logs\stdout.log`
+2. Check Django logs in `authentication.log`
+3. Review error messages in browser developer console
+4. Check Windows Event Viewer for system-level errors
 
----
-
-## Version History
-
-- **v1.0** - Initial deployment guide
-- Date: 2025-12-04

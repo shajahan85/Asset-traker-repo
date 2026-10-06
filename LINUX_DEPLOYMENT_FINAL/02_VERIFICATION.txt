@@ -1,0 +1,106 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    VERIFICATION - RUN THESE AND SEND OUTPUT
+═══════════════════════════════════════════════════════════════════════════════
+
+Run ALL these commands and send the COMPLETE OUTPUT to the user.
+
+═══════════════════════════════════════════════════════════════════════════════
+CHECK 1: Bug Fix Deployed
+═══════════════════════════════════════════════════════════════════════════════
+
+echo "=== Bug Fix Check ==="
+grep -n "limit=30" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+Expected: Should show line 10 with "limit=30"
+Result: [ ] PASS / [ ] FAIL
+
+═══════════════════════════════════════════════════════════════════════════════
+CHECK 2: CSS Source File
+═══════════════════════════════════════════════════════════════════════════════
+
+echo "=== CSS Source File ==="
+ls -lh /var/www/asset_tracker/assets/static/assets/css/styles.css
+grep "overflow-y.*auto" /var/www/asset_tracker/assets/static/assets/css/styles.css | head -1
+
+Expected: File exists, shows "overflow-y: auto"
+Result: [ ] PASS / [ ] FAIL
+
+═══════════════════════════════════════════════════════════════════════════════
+CHECK 3: CSS Collected to Staticfiles
+═══════════════════════════════════════════════════════════════════════════════
+
+echo "=== CSS Staticfiles ==="
+ls -lh /var/www/asset_tracker/staticfiles/assets/css/styles.css
+stat /var/www/asset_tracker/staticfiles/assets/css/styles.css | grep Modify
+
+Expected: File exists with TODAY's date
+Result: [ ] PASS / [ ] FAIL
+
+═══════════════════════════════════════════════════════════════════════════════
+CHECK 4: CSS Content in Staticfiles
+═══════════════════════════════════════════════════════════════════════════════
+
+echo "=== CSS Content Check ==="
+grep "overflow-y.*auto" /var/www/asset_tracker/staticfiles/assets/css/styles.css | head -1
+grep "max-height.*70vh" /var/www/asset_tracker/staticfiles/assets/css/styles.css | head -1
+
+Expected: Both should show matching lines
+Result: [ ] PASS / [ ] FAIL
+
+═══════════════════════════════════════════════════════════════════════════════
+CHECK 5: Services Running
+═══════════════════════════════════════════════════════════════════════════════
+
+echo "=== Services Status ==="
+systemctl is-active asset_tracker
+systemctl is-active nginx
+
+Expected: Both show "active"
+Result: [ ] PASS / [ ] FAIL
+
+═══════════════════════════════════════════════════════════════════════════════
+CHECK 6: No Errors in Logs
+═══════════════════════════════════════════════════════════════════════════════
+
+echo "=== Recent Errors ==="
+sudo journalctl -u asset_tracker -n 50 --no-pager | grep -i error | tail -5
+
+Expected: No critical errors
+Result: [ ] PASS / [ ] FAIL
+
+═══════════════════════════════════════════════════════════════════════════════
+CHECK 7: File Permissions
+═══════════════════════════════════════════════════════════════════════════════
+
+echo "=== File Permissions ==="
+ls -la /var/www/asset_tracker/assets/forms/asset_forms.py | awk '{print $1, $3, $4}'
+ls -la /var/www/asset_tracker/staticfiles/assets/css/styles.css | awk '{print $1, $3, $4}'
+
+Expected: Both owned by www-data
+Result: [ ] PASS / [ ] FAIL
+
+═══════════════════════════════════════════════════════════════════════════════
+SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+Total Checks: 7
+Passed: ___
+Failed: ___
+
+If ALL checks PASS:
+✅ Deployment successful!
+→ Tell user to clear browser cache and test
+
+If ANY checks FAIL:
+❌ Deployment incomplete!
+→ See 03_TROUBLESHOOTING.txt
+→ Send this verification output to user
+
+═══════════════════════════════════════════════════════════════════════════════
+COPY THIS OUTPUT AND SEND TO USER
+═══════════════════════════════════════════════════════════════════════════════
+
+Please copy the complete output of all checks above and send it to the user
+so they can verify the deployment was successful.
+
+═══════════════════════════════════════════════════════════════════════════════

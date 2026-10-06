@@ -1,0 +1,108 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    QUICK DEPLOYMENT GUIDE - Linux Team
+═══════════════════════════════════════════════════════════════════════════════
+
+🚨 CRITICAL BUG FIX INCLUDED - Deploy Immediately
+   Issue: Page freeze when editing assets (BIDC1326, Kharunnisa, etc.)
+   Status: FIXED ✅
+
+═══════════════════════════════════════════════════════════════════════════════
+FILES TO DEPLOY (11 files)
+═══════════════════════════════════════════════════════════════════════════════
+
+PYTHON FILES (5):
+  ⭐ assets/forms/asset_forms.py          ← CRITICAL FIX
+  assets/views.py
+  assets/views_server_controller.py
+  assets/services/asset_service.py
+  assets/services/notification_service.py
+
+TEMPLATES (6):
+  assets/templates/assets/asset_form.html
+  assets/templates/assets/freed_systems.html
+  assets/templates/assets/free_ips.html
+  assets/templates/assets/server_controller_list.html
+  assets/templates/assets/server_controller_form.html
+  assets/templates/assets/server_controller_reassign.html
+
+═══════════════════════════════════════════════════════════════════════════════
+QUICK DEPLOYMENT (Copy & Paste)
+═══════════════════════════════════════════════════════════════════════════════
+
+# 1. Upload to server
+scp -r LINUX_DEPLOYMENT username@server-ip:/tmp/
+
+# 2. SSH to server
+ssh username@server-ip
+
+# 3. Backup current files
+sudo mkdir -p /var/www/asset_tracker/backups/$(date +%Y%m%d_%H%M%S)
+cd /var/www/asset_tracker
+sudo cp -r assets/forms/ backups/$(date +%Y%m%d_%H%M%S)/
+sudo cp -r assets/views*.py backups/$(date +%Y%m%d_%H%M%S)/
+sudo cp -r assets/services/ backups/$(date +%Y%m%d_%H%M%S)/
+sudo cp -r assets/templates/ backups/$(date +%Y%m%d_%H%M%S)/
+
+# 4. Deploy new files
+cd /tmp/LINUX_DEPLOYMENT
+sudo cp -r assets/* /var/www/asset_tracker/assets/
+
+# 5. Set permissions
+sudo chown -R www-data:www-data /var/www/asset_tracker/assets
+sudo chmod -R 755 /var/www/asset_tracker/assets
+
+# 6. Collect static files
+cd /var/www/asset_tracker
+source venv/bin/activate
+python manage.py collectstatic --noinput
+
+# 7. Restart service
+sudo systemctl restart asset_tracker
+sudo systemctl status asset_tracker
+
+═══════════════════════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ Check service: sudo systemctl status asset_tracker
+✅ Check logs: sudo journalctl -u asset_tracker -n 50
+✅ Test in browser: http://your-server/assets/
+✅ Edit BIDC1326: Should load fast, no freeze
+✅ Edit Kharunnisa's asset: Should load fast, no freeze
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPORTANT NOTES
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ DO:
+  - Backup before deploying
+  - Set correct permissions
+  - Restart service
+  - Test after deployment
+
+❌ DON'T:
+  - Run migrations (not needed)
+  - Change settings.py
+  - Skip backup
+  - Forget to restart
+
+⚠️ PRIORITY:
+  - URGENT deployment
+  - Critical bug fix included
+  - Affects all users
+  - Deploy immediately
+
+═══════════════════════════════════════════════════════════════════════════════
+ROLLBACK (If Issues)
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl stop asset_tracker
+cd /var/www/asset_tracker/backups/YYYYMMDD_HHMMSS
+sudo cp -r * /var/www/asset_tracker/assets/
+sudo systemctl start asset_tracker
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Questions? See README.md for detailed instructions.
+
+═══════════════════════════════════════════════════════════════════════════════

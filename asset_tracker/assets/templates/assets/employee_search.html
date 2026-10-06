@@ -1,0 +1,535 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Employee Search - Asset Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+.page-header {
+    text-align: center;
+    padding: 40px 20px 20px;
+    color: white;
+}
+
+.page-header h1 {
+    font-size: 2.5em;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.page-header p {
+    font-size: 1.1em;
+    opacity: 0.95;
+}
+
+.search-container {
+    max-width: 700px;
+    margin: 0 auto 40px;
+    padding: 35px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    animation: slideDown 0.4s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.search-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.search-header h2 {
+    color: #667eea;
+    font-size: 1.6em;
+    margin-bottom: 8px;
+}
+
+.search-header .subtitle {
+    color: #666;
+    font-size: 0.95em;
+}
+
+.search-box {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 0;
+}
+
+.search-box input {
+    flex: 1;
+    padding: 14px 18px;
+    font-size: 1.05em;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.search-box button {
+    padding: 14px 35px;
+    font-size: 1.05em;
+    font-weight: 600;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.search-box button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.employee-results {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding: 20px 25px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.results-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.5em;
+}
+
+.results-header h2 strong {
+    color: #667eea;
+}
+
+.btn-export {
+    padding: 12px 28px;
+    font-weight: 600;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-export:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-export::before {
+    content: "📊";
+    font-size: 1.2em;
+}
+
+.employee-card {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.employee-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.employee-header {
+    border-bottom: 3px solid #f0f0f0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.employee-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.4em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.employee-code {
+    color: #888;
+    font-size: 0.9em;
+    font-weight: 500;
+    margin-top: 5px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-label::before {
+    content: "▸";
+    color: #667eea;
+    font-weight: bold;
+}
+
+.info-value {
+    color: #333;
+    font-weight: 500;
+}
+
+.info-value strong {
+    color: #667eea;
+}
+
+.accessories-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 25px;
+    border: 2px solid #e0e0e0;
+}
+
+.accessories-section h4 {
+    color: #667eea;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.accessories-section h4::before {
+    content: "🎁";
+    font-size: 1.3em;
+}
+
+.accessories-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.accessory-item {
+    padding: 15px;
+    border-left: 4px solid #667eea;
+    background: white;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.accessory-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.accessory-name {
+    font-weight: 700;
+    color: #333;
+    font-size: 1.05em;
+    margin-bottom: 5px;
+}
+
+.accessory-details {
+    color: #666;
+    font-size: 0.95em;
+    margin-top: 5px;
+}
+
+.no-results {
+    text-align: center;
+    padding: 60px 40px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.no-results h3 {
+    color: #667eea;
+    font-size: 1.8em;
+    margin-bottom: 15px;
+}
+
+.no-results p {
+    color: #666;
+    font-size: 1.1em;
+}
+
+.no-results::before {
+    content: "🔍";
+    font-size: 4em;
+    display: block;
+    margin-bottom: 20px;
+}
+
+.asset-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-active {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.badge-freed {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.card-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.btn-sm {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #868f96 0%, #596164 100%);
+    border: none;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(89, 97, 100, 0.4);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🔍 Employee Asset Search</h1>
+    <p>Search for assets and accessories by employee code</p>
+</div>
+
+<div class="search-container">
+    <div class="search-header">
+        <h2>Enter Employee Code</h2>
+        <p class="subtitle">Search for all assets assigned to an employee</p>
+    </div>
+    <form method="get" action="{% url 'employee_search' %}">
+        <div class="search-box">
+            <input type="text" 
+                   name="employee_code" 
+                   class="form-control" 
+                   placeholder="Enter Employee Code (e.g., EMP123)" 
+                   value="{{ employee_code }}"
+                   required>
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+</div>
+
+{% if employee_code %}
+<div class="employee-results">
+    {% if assets %}
+        <div class="results-header">
+            <h2>Assets for Employee: <strong>{{ employee_code }}</strong></h2>
+            <a href="{% url 'employee_assets_export' %}?employee_code={{ employee_code }}" class="btn-export">
+                Export to Excel
+            </a>
+        </div>
+        
+        {% for asset in assets %}
+        <div class="employee-card">
+            <div class="employee-header">
+                <div>
+                    <h3>
+                        {{ asset.assigned_to|default:"Not Assigned" }}
+                    </h3>
+                    <div class="employee-code">👤 Employee Code: {{ asset.employee_code }}</div>
+                </div>
+                <span class="asset-badge {% if asset.status == 'active' %}badge-active{% else %}badge-freed{% endif %}">
+                    {{ asset.get_status_display }}
+                </span>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-label">Asset Tag:</div>
+                <div class="info-value"><strong>{{ asset.asset_tag }}</strong></div>
+                
+                <div class="info-label">System Type:</div>
+                <div class="info-value">{{ asset.system_type }}</div>
+                
+                <div class="info-label">Manufacturer:</div>
+                <div class="info-value">{{ asset.manufacturer|default:"N/A" }}</div>
+                
+                <div class="info-label">Serial Number:</div>
+                <div class="info-value">{{ asset.hardware_serial_number|default:"N/A" }}</div>
+                
+                <div class="info-label">Operating System:</div>
+                <div class="info-value">{{ asset.operating_system.name|default:"N/A" }}</div>
+                
+                <div class="info-label">Primary IP Address:</div>
+                <div class="info-value">
+                    {% with primary_ip=asset.get_primary_ip %}
+                        {% if primary_ip %}
+                            {{ primary_ip.get_ip_display }}
+                            {% if primary_ip.ip_label %}
+                                <em>({{ primary_ip.ip_label }})</em>
+                            {% endif %}
+                        {% else %}
+                            No IP assigned
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                
+                {% with secondary_ips=asset.get_secondary_ips %}
+                {% if secondary_ips %}
+                <div class="info-label">Additional IPs:</div>
+                <div class="info-value">
+                    {% for ip in secondary_ips %}
+                        {{ ip.get_ip_display }}
+                        {% if ip.ip_label %}
+                            <em>({{ ip.ip_label }})</em>
+                        {% endif %}
+                        {% if not forloop.last %}<br>{% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+                
+                <div class="info-label">Team:</div>
+                <div class="info-value">{{ asset.team.name|default:"N/A" }}</div>
+                
+                <div class="info-label">Branch:</div>
+                <div class="info-value">{{ asset.branch.name|default:"N/A" }}</div>
+                
+                <div class="info-label">Warranty Expiration:</div>
+                <div class="info-value">
+                    {% if asset.warranty_expiration %}
+                        {{ asset.warranty_expiration|date:"Y-m-d" }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+                
+                {% if asset.particulars %}
+                <div class="info-label">Particulars:</div>
+                <div class="info-value">{{ asset.particulars }}</div>
+                {% endif %}
+            </div>
+            
+            {% if asset.accessories.all %}
+            <div class="accessories-section">
+                <h4>Accessories Provided</h4>
+                <ul class="accessories-list">
+                    {% for accessory in asset.accessories.all %}
+                    <li class="accessory-item">
+                        <div class="accessory-name">
+                            {{ accessory.accessory_name }}
+                            {% if accessory.quantity > 1 %}
+                                <span style="color: #667eea; font-weight: 700;">(Qty: {{ accessory.quantity }})</span>
+                            {% endif %}
+                        </div>
+                        {% if accessory.accessory_details %}
+                        <div class="accessory-details">📝 {{ accessory.accessory_details }}</div>
+                        {% endif %}
+                        <div class="accessory-details" style="font-size: 0.85em; color: #999;">
+                            📅 Provided: {{ accessory.provided_date|date:"Y-m-d" }}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <div class="accessories-section">
+                <em style="color: #999;">📦 No accessories recorded</em>
+            </div>
+            {% endif %}
+            
+            <div class="card-actions">
+                <a href="{% url 'asset_detail' asset.pk %}" class="btn btn-sm btn-primary">View Details</a>
+                {% if user.is_staff %}
+                <a href="{% url 'asset_update' asset.pk %}" class="btn btn-sm btn-secondary">Edit Asset</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        
+    {% else %}
+        <div class="no-results">
+            <h3>No assets found for employee code: {{ employee_code }}</h3>
+            <p>Please check the employee code and try again.</p>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,165 @@
+═══════════════════════════════════════════════════════════════════════════════
+              HOW TO CHECK IF CSS IS LOADED (For YOU to do NOW)
+═══════════════════════════════════════════════════════════════════════════════
+
+You can check RIGHT NOW if the CSS is being loaded by your browser.
+
+═══════════════════════════════════════════════════════════════════════════════
+METHOD 1: Check in Browser DevTools (Easiest)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Open the production site: assettracker.benzyinfotech.com/assets/
+
+2. Press F12 to open Developer Tools
+
+3. Click "Elements" tab (or "Inspector" in Firefox)
+
+4. Find the table element:
+   - Look for <div class="table-responsive">
+   - Click on it
+
+5. On the right side, check "Styles" or "Computed" tab
+
+6. Look for .table-responsive CSS rules
+
+WHAT YOU SHOULD SEE (if CSS is loaded correctly):
+──────────────────────────────────────────────────
+.table-responsive {
+    overflow-y: auto;          ← MUST be "auto"
+    overflow-x: auto;
+    max-height: 70vh;          ← MUST be present
+    display: block;            ← MUST be present
+    ...
+}
+
+WHAT YOU'RE PROBABLY SEEING (if CSS NOT loaded):
+─────────────────────────────────────────────────
+.table-responsive {
+    overflow-y: visible;       ← WRONG! Should be "auto"
+    max-height: none;          ← WRONG! Should be "70vh"
+    ...
+}
+
+OR: No .table-responsive rules at all!
+
+═══════════════════════════════════════════════════════════════════════════════
+METHOD 2: Check Network Tab
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Press F12 → Click "Network" tab
+
+2. Refresh page (Ctrl + R)
+
+3. Look for "styles.css" in the file list
+
+4. Click on "styles.css"
+
+5. Check:
+   - Status: Should be "200 OK"
+   - Size: Should be ~15-20 KB
+   - Click "Response" tab to see the CSS content
+
+6. Search in the Response (Ctrl + F): "overflow-y: auto"
+
+RESULT:
+- ✅ FOUND: CSS is loaded correctly
+- ❌ NOT FOUND or shows "overflow-y: visible": OLD CSS is cached!
+
+═══════════════════════════════════════════════════════════════════════════════
+METHOD 3: Direct CSS URL Check
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Open a new tab
+
+2. Go to: https://assettracker.benzyinfotech.com/static/assets/css/styles.css
+
+3. Press Ctrl + F (Find)
+
+4. Search for: "overflow-y: auto"
+
+RESULT:
+- ✅ FOUND: CSS file has correct content
+- ❌ NOT FOUND: CSS file is old OR wrong file being served
+
+Also search for: "max-height: 70vh"
+
+BOTH should be found in the file!
+
+═══════════════════════════════════════════════════════════════════════════════
+📸 SCREENSHOT WHAT YOU SEE
+═══════════════════════════════════════════════════════════════════════════════
+
+If you find that CSS is NOT loaded correctly:
+
+1. Take screenshot of F12 → Elements → .table-responsive styles
+2. Take screenshot of F12 → Network → styles.css
+3. Send to Linux team showing OLD CSS is being served
+
+This is PROOF they need to run collectstatic!
+
+═══════════════════════════════════════════════════════════════════════════════
+🔍 QUICK VISUAL TEST
+═══════════════════════════════════════════════════════════════════════════════
+
+Even without DevTools, you can tell:
+
+OLD CSS (currently showing):
+❌ Table displays ALL rows (no height limit)
+❌ No vertical scrollbar on table
+❌ Scrollbar only at bottom of page (if you scroll page down)
+❌ Table header scrolls out of view
+
+NEW CSS (what you should see):
+✅ Table displays ~10-15 rows maximum
+✅ Vertical scrollbar visible on RIGHT side of table
+✅ Table has limited height
+✅ Table header STAYS at top when you scroll table content
+✅ Professional, modern appearance
+
+═══════════════════════════════════════════════════════════════════════════════
+🎯 MOST LIKELY ISSUE
+═══════════════════════════════════════════════════════════════════════════════
+
+Based on your screenshot, I can see:
+
+1. Table shows many rows (more than 10-15)
+2. No visible scrollbar on table
+3. Different appearance from local
+
+This means: OLD CSS IS BEING SERVED!
+
+Reason: collectstatic was NOT run, OR browser has cached old CSS
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ IMMEDIATE ACTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+YOU (right now):
+1. Clear browser cache (Ctrl + Shift + Delete → All time → Clear)
+2. Close browser completely
+3. Open in Incognito/Private window
+4. Check again
+
+LINUX TEAM (urgent):
+1. Run: python manage.py collectstatic --clear --noinput
+2. Run: sudo systemctl restart asset_tracker nginx
+3. Verify: grep "overflow-y.*auto" staticfiles/assets/css/styles.css
+
+═══════════════════════════════════════════════════════════════════════════════
+📝 REPORT TO LINUX TEAM
+═══════════════════════════════════════════════════════════════════════════════
+
+After checking, tell them:
+
+"I checked the CSS in browser DevTools (F12). The production site is loading
+OLD CSS with 'overflow-y: visible'. It should be 'overflow-y: auto'.
+
+This confirms collectstatic was not run or CSS was not collected properly.
+
+Please run:
+  python manage.py collectstatic --clear --noinput
+  sudo systemctl restart nginx
+
+And confirm the CSS file in staticfiles/ directory has today's timestamp."
+
+═══════════════════════════════════════════════════════════════════════════════

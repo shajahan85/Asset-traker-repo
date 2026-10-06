@@ -1,0 +1,47 @@
+========================================
+PERFORMANCE FIX - Limit IP Queries
+========================================
+Date: 2026-09-22 22:45
+
+ISSUE:
+------
+Page freezes for Sankar and Kharunnisa when trying to edit.
+
+CAUSE:
+------
+Production database has too many free IP addresses.
+Loading ALL free IPs causes browser to freeze.
+
+SOLUTION:
+---------
+Added limit of 200 IPs to all IP queries.
+
+This:
+✅ Prevents page freeze
+✅ Loads first 200 free IPs (sorted alphabetically)
+✅ Always includes current IP when editing
+✅ Fast loading for all users
+
+DEPLOY THIS FILE:
+-----------------
+Upload: WORKING_FIX_NO_LIMITS/asset_forms.py
+
+Then run:
+cd /var/www/asset_tracker/
+cp /tmp/asset_forms.py /var/www/asset_tracker/assets/forms/asset_forms.py
+sudo systemctl restart asset_tracker
+
+TEST:
+-----
+- Edit Sankar's asset (BIDC1326) - should load fast, no freeze
+- Edit Kharunnisa's asset - should load fast, no freeze
+- Edit Anjana's assets - should still work
+- All users should work without freeze
+
+TRADEOFF:
+---------
+- Only shows first 200 free IPs in dropdown
+- If you have 1000+ free IPs, only first 200 alphabetically will show
+- This is acceptable - 200 IPs is more than enough for selection
+
+========================================

@@ -1,0 +1,33 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Delete Branch - Asset Tracker{% endblock %}
+
+{% block content %}
+<h1>Delete Branch</h1>
+
+<div class="alert alert-warning">
+    <h2 style="margin-top: 0; font-size: 1.25rem;">⚠️ Warning</h2>
+    <p>Are you sure you want to delete the branch <strong>{{ object.name }}</strong> ({{ object.code }})?</p>
+    
+    {% if object.assets.count > 0 %}
+    <div class="alert alert-danger" style="margin-top: 1rem;">
+        <p style="margin: 0;">
+            <strong>This branch has {{ object.assets.count }} asset{{ object.assets.count|pluralize }} assigned to it.</strong>
+        </p>
+        <p style="margin: 0.5rem 0 0 0;">
+            You must reassign these assets to another branch before deletion.
+        </p>
+    </div>
+    {% else %}
+    <p>This action cannot be undone.</p>
+    {% endif %}
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-danger">Confirm Delete</button>
+        <a href="{% url 'branch_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,269 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Server Controllers - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>🖥️ Server Controllers (192.168.50.x)</h1>
+    <div>
+        {% if current_tab == 'active' %}
+        <a href="{% url 'server_controller_export' %}" class="btn btn-success">📊 Export to Excel</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs-container" style="margin-bottom: 1.5rem;">
+    <a href="?tab=active" class="tab {% if current_tab == 'active' %}active{% endif %}">
+        Active ({{ active_count }})
+    </a>
+    <a href="?tab=freed" class="tab {% if current_tab == 'freed' %}active{% endif %}">
+        Freed ({{ freed_count }})
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="filter-section">
+    <form method="get" class="filter-form">
+        <input type="hidden" name="tab" value="{{ current_tab }}">
+        
+        <div class="filter-fields">
+            <div class="filter-field">
+                <label for="ip_filter">IP Address:</label>
+                <input type="text" id="ip_filter" name="ip_filter" 
+                       placeholder="Filter by IP (e.g., 192.168.50.10)" 
+                       value="{{ ip_filter }}"
+                       style="font-family: monospace; height: 45px; font-size: 16px; padding: 10px;">
+                <small style="display: block; color: #666; margin-top: 0.25rem;">
+                    💡 Enter VM IP to see host machine + all VMs
+                </small>
+            </div>
+            
+            <div class="filter-field">
+                <label for="search">Search:</label>
+                <input type="text" id="search" name="search" 
+                       placeholder="Asset tag or assigned to..." 
+                       value="{{ search_query }}"
+                       style="height: 45px; font-size: 16px; padding: 10px;">
+            </div>
+            
+            <div class="filter-field">
+                <label for="team">Team:</label>
+                <select id="team" name="team" style="height: 45px; font-size: 16px; padding: 10px;">
+                    <option value="">-- All Teams --</option>
+                    {% for team in teams %}
+                    <option value="{{ team.id }}" {% if selected_team == team.id|stringformat:"s" %}selected{% endif %}>
+                        {{ team.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-field">
+                <label for="branch">Branch:</label>
+                <select id="branch" name="branch" style="height: 45px; font-size: 16px; padding: 10px;">
+                    <option value="">-- All Branches --</option>
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}" {% if selected_branch == branch.id|stringformat:"s" %}selected{% endif %}>
+                        {{ branch.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="?tab={{ current_tab }}" class="btn btn-secondary">Clear Filters</a>
+        </div>
+    </form>
+</div>
+
+<!-- Results Count -->
+{% if filtered_by_vm %}
+<div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 1rem; margin-bottom: 1rem;">
+    <strong>🔍 Filtering by VM IP:</strong> {{ filtered_vm_ip }} ({{ filtered_vm_name }})
+    <br>
+    <small style="color: #666;">Showing host machine and all associated VMs</small>
+</div>
+{% endif %}
+
+<p style="color: #666; margin-bottom: 1rem;">
+    Showing {{ server_controllers|length }} server controller{{ server_controllers|length|pluralize }}
+</p>
+
+{% if server_controllers %}
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Asset Tag</th>
+                <th>IP Address</th>
+                <th>System Type</th>
+                <th>OS</th>
+                {% if current_tab == 'active' %}
+                <th>Assigned To</th>
+                <th>Team</th>
+                <th>Branch</th>
+                <th>Hyper-V VMs</th>
+                {% else %}
+                <th>Freed Date</th>
+                <th>Health Status</th>
+                {% endif %}
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asset in server_controllers %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ asset.asset_tag }}</strong></td>
+                <td>{{ asset.get_ip_address_string|default:"—" }}</td>
+                <td>{{ asset.system_type }}</td>
+                <td>{{ asset.operating_system.name|default:"—" }}</td>
+                
+                {% if current_tab == 'active' %}
+                <td>{{ asset.assigned_to|default:"—" }}</td>
+                <td>
+                    {% if asset.team %}
+                        {% if asset.team.parent %}
+                            {{ asset.team.parent.name }} > {{ asset.team.name }}
+                        {% else %}
+                            {{ asset.team.name }}
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{{ asset.branch.name|default:"—" }}</td>
+                <td>
+                    {% with vms=asset.hosted_vms.all %}
+                        {% if vms %}
+                            <div style="position: relative;">
+                                <span class="badge badge-info" style="cursor: help;" 
+                                      title="Click to expand VM details">
+                                    {{ vms.count }} VM{{ vms.count|pluralize }}
+                                </span>
+                                <div style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
+                                    {% for vm in vms %}
+                                        <div style="padding: 0.15rem 0; {% if ip_filter and vm.get_display_ip == ip_filter %}background: #fff3cd; font-weight: bold;{% endif %}">
+                                            • {{ vm.name }}: {{ vm.get_display_ip }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% else %}
+                            —
+                        {% endif %}
+                    {% endwith %}
+                </td>
+                {% else %}
+                <td>{{ asset.freed_date|date:"Y-m-d" }}</td>
+                <td>
+                    {% if asset.health_status %}
+                        <span class="badge {% if asset.health_status == 'healthy' %}badge-success{% else %}badge-danger{% endif %}">
+                            {{ asset.get_health_status_display }}
+                        </span>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                {% endif %}
+                
+                <td>
+                    <div class="action-buttons">
+                        {% if current_tab == 'active' %}
+                        <a href="{% url 'server_controller_edit' asset.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                        <form method="post" action="{% url 'server_controller_free' asset.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to free this server controller?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger">Free</button>
+                        </form>
+                        <a href="{% url 'asset_history' asset.pk %}" class="btn btn-sm btn-info">📋 History</a>
+                        {% else %}
+                        <a href="{% url 'server_controller_reassign' asset.pk %}" class="btn btn-sm btn-success">Reassign</a>
+                        <form method="post" action="{% url 'server_controller_scrap' asset.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to scrap this server controller?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger">Scrap</button>
+                        </form>
+                        <a href="{% url 'asset_history' asset.pk %}" class="btn btn-sm btn-info">📋 History</a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div style="text-align: center; padding: 3rem; color: #999;">
+    <p style="font-size: 1.2rem; margin-bottom: 0.5rem;">No server controllers found</p>
+    <p>{% if current_tab == 'freed' %}No freed {% endif %}Systems with IP addresses in 192.168.50.x range</p>
+</div>
+{% endif %}
+
+<style>
+/* Tabs Styling */
+.tabs-container {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.tab {
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    color: #666;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.tab:hover {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+.tab.active {
+    background-color: white;
+    color: #2c3e50;
+    font-weight: 600;
+    border-bottom: 2px solid white;
+    margin-bottom: -2px;
+}
+
+/* Action Buttons in Table */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.action-buttons form {
+    margin: 0;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.badge-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+</style>
+{% endblock %}

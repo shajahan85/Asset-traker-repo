@@ -1,0 +1,21 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ONE COMMAND FIX FOR PAGE FREEZE BUG
+═══════════════════════════════════════════════════════════════════════════════
+
+Linux team: Copy and paste this ONE command and press Enter:
+
+sudo cp /tmp/LINUX_DEPLOYMENT_FINAL/assets/forms/asset_forms.py /var/www/asset_tracker/assets/forms/asset_forms.py && sudo systemctl restart asset_tracker && echo "DONE - Django restarted with bug fix" || echo "FAILED - Check error above"
+
+═══════════════════════════════════════════════════════════════════════════════
+
+That's it! This command will:
+1. Copy the bug fix file
+2. Restart Django
+3. Tell you if it worked
+
+Then verify:
+grep "limit=30" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+Should show: def get_filtered_free_ips(include_current_ip_id=None, limit=30):
+
+═══════════════════════════════════════════════════════════════════════════════

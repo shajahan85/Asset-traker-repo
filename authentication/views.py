@@ -27,7 +27,7 @@ class LoginView(View):
     def get(self, request):
         """Display login form"""
         if request.user.is_authenticated:
-            return redirect('dashboard')
+            return redirect(settings.LOGIN_REDIRECT_URL)
         form = AuthenticationForm()
         return render(request, 'authentication/login.html', {'form': form})
     
@@ -44,7 +44,7 @@ class LoginView(View):
                 login(request, user)
                 logger.info(f'Successful login for user: {username}')
                 messages.success(request, f'Welcome back, {username}!')
-                next_url = request.GET.get('next', 'dashboard')
+                next_url = request.GET.get('next', settings.LOGIN_REDIRECT_URL)
                 return redirect(next_url)
             else:
                 logger.warning(f'Failed login attempt for username: {username}')

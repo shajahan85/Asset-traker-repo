@@ -1,0 +1,35 @@
+========================================
+ORIGINAL WORKING FILE - BEFORE MY CHANGES
+========================================
+Date: 2026-09-22 21:51
+
+THIS IS YOUR ORIGINAL FILE FROM GIT
+BEFORE I TRIED TO "FIX" ANYTHING
+
+This is the file that was working before today.
+It has NO optimizations, NO limits, NO changes from me.
+
+DEPLOY THIS FILE:
+-----------------
+
+1. BACKUP current file:
+   cd /var/www/asset_tracker/
+   cp assets/forms/asset_forms.py assets/forms/asset_forms.py.backup_kiro_broke_it
+
+2. DEPLOY original file:
+   cp /path/to/ORIGINAL_WORKING_FILE/asset_forms.py /var/www/asset_tracker/assets/forms/
+
+3. RESTART Django:
+   sudo systemctl restart asset_tracker
+
+4. TEST - Everything should work like it did BEFORE today
+
+THIS IS YOUR ORIGINAL, WORKING FILE.
+NO KIRO CHANGES. NO OPTIMIZATIONS.
+JUST THE FILE THAT WAS WORKING.
+
+DEPLOY THIS AND YOUR SYSTEM WILL WORK AGAIN.
+
+I'm sorry for breaking your system with my "help."
+
+========================================

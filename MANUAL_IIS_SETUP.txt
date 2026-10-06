@@ -1,0 +1,191 @@
+=====================================
+MANUAL IIS CONFIGURATION
+For Asset Tracker on 192.168.10.29:8081
+Location: E:\Asset-tracker tool
+=====================================
+
+IMPORTANT: You need Administrator privileges!
+
+PROBLEM: wfastcgi-enable requires admin rights
+
+SOLUTION: Configure IIS manually (easier!)
+
+=====================================
+METHOD 1: AUTOMATED (RECOMMENDED)
+=====================================
+
+1. Copy FIX_IIS_CONFIG.ps1 to server
+
+2. Right-click PowerShell → "Run as Administrator"
+
+3. Run the script:
+   cd "E:\Asset-tracker tool"
+   .\FIX_IIS_CONFIG.ps1
+
+4. Follow the on-screen instructions
+
+5. Done!
+
+=====================================
+METHOD 2: MANUAL CONFIGURATION
+=====================================
+
+STEP 1: CONFIGURE FASTCGI IN IIS
+---------------------------------
+1. Open IIS Manager (inetmgr) AS ADMINISTRATOR
+
+2. Click on SERVER NAME (top level, not the site)
+
+3. Double-click "FastCGI Settings"
+
+4. Click "Add Application..." (right panel)
+
+5. Fill in these values:
+
+   Full Path:
+   E:\Asset-tracker tool\venv\Scripts\python.exe
+
+   Arguments:
+   E:\Asset-tracker tool\venv\Lib\site-packages\wfastcgi.py
+
+6. Click on "Environment Variables" collection, then click [...] button
+
+7. Add these 3 variables:
+
+   Name: PYTHONPATH
+   Value: E:\Asset-tracker tool
+
+   Name: DJANGO_SETTINGS_MODULE
+   Value: asset_tracker.settings
+
+   Name: WSGI_HANDLER
+   Value: asset_tracker.wsgi.application
+
+8. Set these additional properties:
+   - Max Instances: 4
+   - Idle Timeout: 1800
+   - Activity Timeout: 1800
+   - Request Timeout: 1800
+
+9. Click OK
+
+
+STEP 2: ADD HANDLER MAPPING
+---------------------------------
+1. In IIS Manager, go to your ASSETTRACKER SITE (not server level)
+
+2. Double-click "Handler Mappings"
+
+3. Click "Add Module Mapping..." (right panel)
+
+4. Fill in:
+
+   Request path: *
+   
+   Module: FastCgiModule
+   
+   Executable: E:\Asset-tracker tool\venv\Scripts\python.exe|E:\Asset-tracker tool\venv\Lib\site-packages\wfastcgi.py
+   
+   Name: Django Handler
+
+5. Click "Request Restrictions..." button
+   - UNCHECK "Invoke handler only if request is mapped to:"
+   - Click OK
+
+6. Click OK
+
+7. Click "Yes" when prompted about creating FastCGI application
+
+
+STEP 3: VERIFY WEB.CONFIG
+---------------------------------
+Make sure web.config exists at:
+E:\Asset-tracker tool\web.config
+
+It should contain the correct paths for:
+- Python executable
+- wfastcgi.py path
+- PYTHONPATH
+
+
+STEP 4: SET PERMISSIONS
+---------------------------------
+Open PowerShell as Administrator:
+
+icacls "E:\Asset-tracker tool" /grant "IIS_IUSRS:(OI)(CI)F" /T
+
+
+STEP 5: RESTART IIS
+---------------------------------
+iisreset /restart
+
+
+STEP 6: TEST
+---------------------------------
+Open browser:
+http://192.168.10.29:8081/
+
+Expected: Django application loads
+
+If you get errors:
+- Check IIS logs: C:\inetpub\logs\LogFiles\
+- Check FastCGI settings in IIS
+- Verify all paths are correct
+- Make sure wfastcgi is installed: pip install wfastcgi
+
+=====================================
+QUICK COPY-PASTE VALUES
+=====================================
+
+Python Path:
+E:\Asset-tracker tool\venv\Scripts\python.exe
+
+wfastcgi Path:
+E:\Asset-tracker tool\venv\Lib\site-packages\wfastcgi.py
+
+Combined Handler Path:
+E:\Asset-tracker tool\venv\Scripts\python.exe|E:\Asset-tracker tool\venv\Lib\site-packages\wfastcgi.py
+
+Project Path:
+E:\Asset-tracker tool
+
+Settings Module:
+asset_tracker.settings
+
+WSGI Handler:
+asset_tracker.wsgi.application
+
+=====================================
+TROUBLESHOOTING
+=====================================
+
+ERROR: "scriptProcessor could not be found"
+→ FastCGI application not configured
+→ Follow STEP 1 above
+
+ERROR: HTTP 500 - Internal Server Error
+→ Check IIS logs
+→ Verify Python path is correct
+→ Make sure wfastcgi is installed
+→ Check permissions
+
+ERROR: Static files not loading
+→ Run: python manage.py collectstatic --noinput
+→ Check staticfiles folder exists
+→ Restart IIS
+
+ERROR: Permission denied
+→ Run: icacls "E:\Asset-tracker tool" /grant "IIS_IUSRS:(OI)(CI)F" /T
+→ Restart IIS
+
+=====================================
+NEED HELP?
+=====================================
+
+Check these files:
+- DEPLOY_TO_SERVER.md (complete guide)
+- hosting_requirements\TROUBLESHOOTING.md
+- hosting_requirements\IIS_DEPLOYMENT_GUIDE.md
+
+View logs:
+Get-Content "C:\inetpub\logs\LogFiles\W3SVC*\*.log" | Select-Object -Last 50

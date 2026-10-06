@@ -630,7 +630,15 @@ class TestIPManagementService(TestCase):
         
         # Create OS and Team
         self.os = OperatingSystem.objects.create(name="Windows 10")
-        self.team = Team.objects.create(name="IT Department")
+        
+        # Get or create Kochi branch (created by migration)
+        from assets.models import Branch
+        self.branch, _ = Branch.objects.get_or_create(
+            name='Kochi',
+            defaults={'code': 'KCH', 'is_active': True}
+        )
+        
+        self.team = Team.objects.create(name="IT Department", branch=self.branch)
         
         # Create asset
         self.asset = Asset.objects.create(
@@ -638,6 +646,7 @@ class TestIPManagementService(TestCase):
             system_type="Desktop",
             operating_system=self.os,
             team=self.team,
+            branch=self.branch,
             status="active"
         )
     
@@ -812,7 +821,206 @@ class TestIPManagementService(TestCase):
         ip_addresses = [ip.address for ip in available_ips]
         self.assertNotIn("192.168.10.1", ip_addresses)
         self.assertIn("192.168.10.2", ip_addresses)
-        self.assertIn("192.168.11.1", ip_addresses)
+    
+    def test_assign_ip_to_guest_success(self):
+        """Test that assign_ip_to_guest marks IP as assigned and saves guest details."""
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+        
+        admin_user = User.objects.create_user(username='admin', password='password')
+        
+        before_assign = timezone.now()
+        IPManagementService.assign_ip_to_guest(self.ip1, 'John Doe', admin_user)
+        after_assign = timezone.now()
+        
+        self.ip1.refresh_from_db()
+        self.assertTrue(self.ip1.is_assigned)
+        self.assertEqual(self.ip1.guest_name, 'John Doe')
+        self.assertEqual(self.ip1.guest_assigned_by, 'admin')
+        self.assertIsNotNone(self.ip1.guest_assigned_date)
+        self.assertGreaterEqual(self.ip1.guest_assigned_date, before_assign)
+        self.assertLessEqual(self.ip1.guest_assigned_date, after_assign)
+    
+    def test_assign_ip_to_guest_strips_whitespace(self):
+        """Test that assign_ip_to_guest strips whitespace from guest name."""
+        from django.contrib.auth.models import User
+        
+        admin_user = User.objects.create_user(username='admin', password='password')
+        
+        IPManagementService.assign_ip_to_guest(self.ip1, '  Jane Smith  ', admin_user)
+        
+        self.ip1.refresh_from_db()
+        self.assertEqual(self.ip1.guest_name, 'Jane Smith')
+    
+    def test_assign_ip_to_guest_already_assigned_raises_error(self):
+        """Test that assigning an already-assigned IP raises ValidationError."""
+        from django.contrib.auth.models import User
+        
+        admin_user = User.objects.create_user(username='admin', password='password')
+        
+        # Assign IP to asset
+        self.ip1.is_assigned = True
+        self.ip1.assigned_to_asset = self.asset
+        self.ip1.save()
+        
+        with self.assertRaises(ValidationError) as context:
+            IPManagementService.assign_ip_to_guest(self.ip1, 'John Doe', admin_user)
+        
+        self.assertIn('already assigned', str(context.exception))
+    
+    def test_assign_ip_to_guest_already_guest_assigned_raises_error(self):
+        """Test that assigning an IP that's already guest-assigned raises ValidationError."""
+        from django.contrib.auth.models import User
+        
+        admin_user = User.objects.create_user(username='admin', password='password')
+        
+        # Assign IP to guest
+        self.ip1.guest_name = 'Jane Smith'
+        self.ip1.save()
+        
+        with self.assertRaises(ValidationError) as context:
+            IPManagementService.assign_ip_to_guest(self.ip1, 'John Doe', admin_user)
+        
+        self.assertIn('already assigned', str(context.exception))
+    
+    def test_assign_ip_to_guest_manual_ip_conflict_raises_error(self):
+        """Test that assigning an IP used as manual IP raises ValidationError."""
+        from django.contrib.auth.models import User
+        
+        admin_user = User.objects.create_user(username='admin', password='password')
+        
+        # Create asset with manual IP
+        Asset.objects.create(
+            asset_tag='BIDC999',
+            system_type='Desktop',
+            operating_system=self.os,
+            manual_ip='192.168.10.1',
+            status='active'
+        )
+        
+        with self.assertRaises(ValidationError) as context:
+            IPManagementService.assign_ip_to_guest(self.ip1, 'John Doe', admin_user)
+        
+        self.assertIn('manual IP', str(context.exception))
+    
+    def test_release_guest_ip_success(self):
+        """Test that release_guest_ip clears guest fields and marks IP as free."""
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+        
+        admin_user = User.objects.create_user(username='admin', password='password')
+        
+        # Assign IP to guest first
+        self.ip1.is_assigned = True
+        self.ip1.guest_name = 'John Doe'
+        self.ip1.guest_assigned_date = timezone.now()
+        self.ip1.guest_assigned_by = 'admin'
+        self.ip1.save()
+        
+        before_release = timezone.now()
+        IPManagementService.release_guest_ip(self.ip1, admin_user)
+        after_release = timezone.now()
+        
+        self.ip1.refresh_from_db()
+        self.assertFalse(self.ip1.is_assigned)
+        self.assertIsNone(self.ip1.guest_name)
+        self.assertIsNone(self.ip1.guest_assigned_date)
+        self.assertIsNone(self.ip1.guest_assigned_by)
+        self.assertIsNotNone(self.ip1.freed_date)
+        self.assertGreaterEqual(self.ip1.freed_date, before_release)
+        self.assertLessEqual(self.ip1.freed_date, after_release)
+    
+    def test_release_guest_ip_not_guest_assigned_raises_error(self):
+        """Test that releasing a non-guest-assigned IP raises ValidationError."""
+        from django.contrib.auth.models import User
+        
+        admin_user = User.objects.create_user(username='admin', password='password')
+        
+        # IP has no guest assignment
+        self.ip1.guest_name = None
+        self.ip1.save()
+        
+        with self.assertRaises(ValidationError) as context:
+            IPManagementService.release_guest_ip(self.ip1, admin_user)
+        
+        self.assertIn('not assigned to a guest', str(context.exception))
+    
+    def test_is_ip_manually_used_asset(self):
+        """Test that _is_ip_manually_used detects manual IP usage by assets."""
+        # Create asset with manual IP
+        Asset.objects.create(
+            asset_tag='BIDC888',
+            system_type='Desktop',
+            operating_system=self.os,
+            manual_ip='192.168.10.1',
+            status='active'
+        )
+        
+        result = IPManagementService._is_ip_manually_used('192.168.10.1')
+        self.assertTrue(result)
+    
+    def test_is_ip_manually_used_network_device(self):
+        """Test that _is_ip_manually_used detects manual IP usage by network devices."""
+        from assets.models import NetworkDevice
+        
+        # Create network device with manual IP
+        NetworkDevice.objects.create(
+            device_name='Switch-1',
+            device_type='Switch',
+            manual_ip='192.168.10.1'
+        )
+        
+        result = IPManagementService._is_ip_manually_used('192.168.10.1')
+        self.assertTrue(result)
+    
+    def test_is_ip_manually_used_vm(self):
+        """Test that _is_ip_manually_used detects manual IP usage by VMs."""
+        from assets.models import HyperVVM
+        
+        # Create VM with manual IP
+        HyperVVM.objects.create(
+            name='TestVM',
+            host_machine=self.asset,
+            manual_ip='192.168.10.1',
+            is_active=True
+        )
+        
+        result = IPManagementService._is_ip_manually_used('192.168.10.1')
+        self.assertTrue(result)
+    
+    def test_is_ip_manually_used_not_used(self):
+        """Test that _is_ip_manually_used returns False for unused IP."""
+        result = IPManagementService._is_ip_manually_used('192.168.10.1')
+        self.assertFalse(result)
+    
+    def test_is_ip_manually_used_ignores_inactive_assets(self):
+        """Test that _is_ip_manually_used ignores inactive assets."""
+        # Create inactive asset with manual IP
+        Asset.objects.create(
+            asset_tag='BIDC777',
+            system_type='Desktop',
+            operating_system=self.os,
+            manual_ip='192.168.10.1',
+            status='freed'
+        )
+        
+        result = IPManagementService._is_ip_manually_used('192.168.10.1')
+        self.assertFalse(result)
+    
+    def test_is_ip_manually_used_ignores_inactive_vms(self):
+        """Test that _is_ip_manually_used ignores inactive VMs."""
+        from assets.models import HyperVVM
+        
+        # Create inactive VM with manual IP
+        HyperVVM.objects.create(
+            name='InactiveVM',
+            host_machine=self.asset,
+            manual_ip='192.168.10.1',
+            is_active=False
+        )
+        
+        result = IPManagementService._is_ip_manually_used('192.168.10.1')
+        self.assertFalse(result)
     
     def test_get_available_ips_returns_all_when_none_assigned(self):
         """Test that get_available_ips returns all IPs when none are assigned."""

@@ -1094,6 +1094,105 @@ class TestFreeIPsView(TestCase):
         self.assertEqual(len(ip_ranges), 1)
         self.assertIn('192.168.10.x', ip_ranges)
         self.assertEqual(len(ip_ranges['192.168.10.x']), 2)
+    
+    def test_free_ips_view_identifies_guest_assigned_ips(self):
+        """Test that guest-assigned IPs are identified with occupant_type='guest'."""
+        from django.utils import timezone
+        from django.contrib.auth.models import User
+        
+        # Create and login a test user
+        user = User.objects.create_user(username='testuser', password='testpass123')
+        self.client.login(username='testuser', password='testpass123')
+        
+        # Assign one IP to a guest
+        self.free_ip1.is_assigned = True
+        self.free_ip1.guest_name = 'John Doe'
+        self.free_ip1.guest_assigned_date = timezone.now()
+        self.free_ip1.guest_assigned_by = 'admin'
+        self.free_ip1.save()
+        
+        response = self.client.get(reverse('free_ips'))
+        self.assertEqual(response.status_code, 200)
+        
+        # Get the grouped IPs dict
+        ip_ranges = response.context['ip_ranges']
+        
+        # Find the guest-assigned IP in the ranges
+        guest_ip_found = False
+        for range_pattern, ip_data_list in ip_ranges.items():
+            for ip_data in ip_data_list:
+                ip = ip_data['ip']
+                if ip.address == '192.168.10.100':
+                    # Verify guest occupant type and name
+                    self.assertEqual(ip.occupant_type, 'guest')
+                    self.assertEqual(ip.occupant_name, 'John Doe')
+                    guest_ip_found = True
+                    break
+            if guest_ip_found:
+                break
+        
+        self.assertTrue(guest_ip_found, "Guest-assigned IP not found in response")
+    
+    def test_free_ips_view_guest_check_before_other_types(self):
+        """Test that guest assignment takes precedence over other occupant types."""
+        from django.utils import timezone
+        from django.contrib.auth.models import User
+        
+        # Create and login a test user
+        user = User.objects.create_user(username='testuser', password='testpass123')
+        self.client.login(username='testuser', password='testpass123')
+        
+        # Create a host asset for the VM
+        from assets.models import HyperVVM, OperatingSystem, Team, Branch
+        
+        os = OperatingSystem.objects.create(name='Windows Server')
+        branch, _ = Branch.objects.get_or_create(name='Kochi', defaults={'code': 'KCH'})
+        team = Team.objects.create(name='IT Team', branch=branch)
+        
+        host_asset = Asset.objects.create(
+            asset_tag='HOST001',
+            system_type='Desktop',
+            operating_system=os,
+            status='active',
+            team=team
+        )
+        
+        # Create a VM with the same IP as guest assignment
+        vm = HyperVVM.objects.create(
+            name='test-vm',
+            host_machine=host_asset,
+            ip_address=self.free_ip1,
+            is_active=True
+        )
+        
+        # Assign the IP to a guest (should take precedence)
+        self.free_ip1.is_assigned = True
+        self.free_ip1.guest_name = 'Jane Smith'
+        self.free_ip1.guest_assigned_date = timezone.now()
+        self.free_ip1.guest_assigned_by = 'admin'
+        self.free_ip1.save()
+        
+        response = self.client.get(reverse('free_ips'))
+        self.assertEqual(response.status_code, 200)
+        
+        # Get the grouped IPs dict
+        ip_ranges = response.context['ip_ranges']
+        
+        # Find the IP and verify guest takes precedence
+        guest_ip_found = False
+        for range_pattern, ip_data_list in ip_ranges.items():
+            for ip_data in ip_data_list:
+                ip = ip_data['ip']
+                if ip.address == '192.168.10.100':
+                    # Verify guest occupant type takes precedence over VM
+                    self.assertEqual(ip.occupant_type, 'guest')
+                    self.assertEqual(ip.occupant_name, 'Jane Smith')
+                    guest_ip_found = True
+                    break
+            if guest_ip_found:
+                break
+        
+        self.assertTrue(guest_ip_found, "Guest-assigned IP not found in response")
 
 
 

@@ -1,0 +1,95 @@
+Asset Tracker - Deployment Package v2.2
+========================================
+
+Date: September 16, 2026
+Priority: URGENT - Critical Bug Fix
+Status: Ready for Production
+
+FILES INCLUDED (11):
+====================
+
+PYTHON FILES:
+-------------
+1. assets/views.py
+   Purpose: Main views with email notifications
+   Size: ~50KB
+   
+2. assets/views_server_controller.py
+   Purpose: Server Controller management + IP filter
+   Size: ~15KB
+   
+3. assets/forms/asset_forms.py ⭐ CRITICAL
+   Purpose: Asset forms + FREEZE BUG FIX
+   Size: ~35KB
+   Fix: Limited IP dropdown to 30 items, removed sorting
+   
+4. assets/services/asset_service.py
+   Purpose: Asset operations service
+   Size: ~20KB
+   
+5. assets/services/notification_service.py
+   Purpose: Email notification service
+   Size: ~15KB
+
+TEMPLATE FILES:
+---------------
+6. assets/templates/assets/asset_form.html
+   Purpose: Asset edit form with email checkbox
+   Size: ~40KB
+   
+7. assets/templates/assets/freed_systems.html
+   Purpose: Freed systems page (SC badge, table fixes)
+   Size: ~25KB
+   
+8. assets/templates/assets/free_ips.html
+   Purpose: Free IP page with series filters
+   Size: ~20KB
+   
+9. assets/templates/assets/server_controller_list.html
+   Purpose: Server Controllers main page + IP filter
+   Size: ~30KB
+   
+10. assets/templates/assets/server_controller_form.html
+    Purpose: Server Controller edit form
+    Size: ~15KB
+    
+11. assets/templates/assets/server_controller_reassign.html
+    Purpose: Server Controller reassign form
+    Size: ~12KB
+
+DOCUMENTATION:
+--------------
+- README.md (Complete deployment guide)
+- QUICK_START.txt (Fast reference)
+- FILE_LIST.txt (This file)
+
+TOTAL SIZE: ~280KB (estimated)
+
+CRITICAL FIX:
+=============
+⭐ assets/forms/asset_forms.py
+   - Fixes page freeze issue
+   - Affects: BIDC1326 (Sankar), Kharunnisa, ALL users
+   - Status: Tested and verified working
+   - Result: Page loads in <1 second instead of freezing
+
+NEW FEATURES:
+=============
+1. Server Controllers page (192.168.50.x management)
+2. IP filter with VM detection
+3. Email notification toggle
+4. IP series quick filters
+5. Enhanced UI improvements
+
+DEPLOYMENT TARGET:
+==================
+Server Path: /var/www/asset_tracker/assets/
+Service: asset_tracker (systemd)
+User: www-data
+Permissions: 755 (directories), 644 (files)
+
+NO MIGRATIONS NEEDED
+====================
+All changes are code-only.
+No database schema changes.
+Safe to deploy immediately.

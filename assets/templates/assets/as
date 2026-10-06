@@ -175,6 +175,9 @@
             {% if form.instance.pk %}Update{% else %}Create{% endif %} Asset
         </button>
         <a href="{% url 'asset_list' %}" class="btn btn-secondary">Cancel</a>
+        {% if form.instance.pk %}
+        <a href="{% url 'asset_history' form.instance.pk %}" class="btn btn-info">View History</a>
+        {% endif %}
     </div>
 </form>
 

@@ -1,0 +1,125 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║   📦 DEPLOYMENT PACKAGE - READY TO UPLOAD                     ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+✅ This folder contains ALL FILES needed for your Linux server
+
+--------------------------------------------------------------------
+WHAT'S INSIDE:
+--------------------------------------------------------------------
+
+✓ 7 Updated Application Files (Python + HTML)
+✓ 1 Automated Deployment Script (DEPLOY.sh)
+✓ 4 Documentation Files
+
+TOTAL: 12 files ready to upload
+
+--------------------------------------------------------------------
+HOW TO USE:
+--------------------------------------------------------------------
+
+OPTION 1 - Using SCP (Recommended):
+===================================
+From Windows PowerShell, run this command:
+
+  scp -r "d:\Asset tracker\deployment_package" username@your-server:/tmp/
+
+Replace:
+  - username: your Linux username
+  - your-server: your server IP address or hostname
+
+
+OPTION 2 - Using FileZilla/WinSCP:
+===================================
+1. Open FileZilla or WinSCP
+2. Connect to your Linux server
+3. Navigate to /tmp/ folder on server
+4. Upload the entire "deployment_package" folder
+
+
+--------------------------------------------------------------------
+AFTER UPLOAD - RUN ON SERVER:
+--------------------------------------------------------------------
+
+SSH to your Linux server and run these 2 commands:
+
+  cd /tmp/deployment_package
+  bash DEPLOY.sh
+
+The script will automatically:
+  ✓ Backup your current files
+  ✓ Copy all 7 updated files
+  ✓ Set correct permissions
+  ✓ Collect static files
+  ✓ Restart your application
+
+--------------------------------------------------------------------
+FILES INCLUDED:
+--------------------------------------------------------------------
+
+PYTHON FILES:
+  1. assets/forms/asset_forms.py
+  2. assets/services/notification_service.py
+  3. assets/services/asset_service.py
+  4. assets/views.py
+
+HTML TEMPLATES:
+  5. assets/templates/assets/asset_form.html
+  6. assets/templates/assets/free_ips.html
+  7. assets/templates/assets/freed_systems.html
+
+DEPLOYMENT FILES:
+  • DEPLOY.sh (run this on server)
+  • README.md (quick instructions)
+  • DEPLOYMENT_UPDATE_GUIDE.md (detailed guide)
+  • FILE_LIST.txt (complete file list)
+
+--------------------------------------------------------------------
+FEATURES IN THIS UPDATE:
+--------------------------------------------------------------------
+
+1. ✅ Email Notification Toggle
+   - Checkbox to control email sending
+   - Default: Checked (sends email)
+   - Uncheck to skip notification
+
+2. ✅ IP Series Quick Filter
+   - Buttons: 192.168.10.x, 70.x, 11.x, 50.x, Other, Show All
+   - Instant filtering on Free IP page
+
+3. ✅ Freed Systems Table Fix
+   - Removed "Issues" column
+   - Fixed Actions buttons visibility
+
+4. ✅ Employee Code in Emails
+   - All email notifications now include employee code
+
+--------------------------------------------------------------------
+IMPORTANT NOTES:
+--------------------------------------------------------------------
+
+✓ No database changes required
+✓ No settings.py changes required
+✓ Automatic backup created before deployment
+✓ Works with your PostgreSQL database on Linux
+✓ Safe to deploy - all changes tested
+
+--------------------------------------------------------------------
+QUICK REFERENCE:
+--------------------------------------------------------------------
+
+Folder Location:  d:\Asset tracker\deployment_package\
+Server Target:    /var/www/asset_tracker/
+Upload Command:   scp -r "d:\Asset tracker\deployment_package" user@server:/tmp/
+Deploy Command:   cd /tmp/deployment_package && bash DEPLOY.sh
+Restart Command:  sudo systemctl restart asset_tracker
+
+--------------------------------------------------------------------
+
+📖 For detailed instructions, open: README.md
+
+🚀 Ready to deploy - just upload this entire folder!
+
+====================================================================

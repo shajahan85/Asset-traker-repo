@@ -1,0 +1,183 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Active Assets - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>Active Assets</h1>
+    <div>
+        <a href="{% url 'power_monitoring:report' %}" class="btn btn-info">💻 Power Monitoring</a>
+        <a href="{% url 'export_active_assets' %}" class="btn btn-success">Export to Excel</a>
+        {% if request.GET.employee_code %}
+        <a href="{% url 'employee_assets_export' %}?employee_code={{ request.GET.employee_code }}" class="btn btn-success" style="background-color: #27ae60;">
+            📊 Export Employee Assets ({{ request.GET.employee_code }})
+        </a>
+        {% endif %}
+        {% if user.is_staff %}
+        <a href="{% url 'team_management' %}" class="btn btn-warning">👥 Manage Teams</a>
+        <a href="{% url 'asset_create' %}" class="btn btn-primary">Add New Asset</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filter Form Section -->
+<div class="filter-section">
+    <form method="get" action="{% url 'asset_list' %}" class="filter-form">
+        <div class="filter-header">
+            <h3>Filter Assets</h3>
+            {% if filter_form.branch.value or filter_form.operating_system.value or filter_form.system_type.value or filter_form.asset_tag.value or filter_form.team.value or filter_form.assigned_to.value or filter_form.employee_code.value or filter_form.ip_address.value %}
+            <span class="filter-badge">
+                Filters Active
+            </span>
+            {% endif %}
+        </div>
+        
+        <div class="filter-fields">
+            <div class="filter-field">
+                <label for="{{ filter_form.branch.id_for_label }}">{{ filter_form.branch.label }}</label>
+                {{ filter_form.branch }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.operating_system.id_for_label }}">{{ filter_form.operating_system.label }}</label>
+                {{ filter_form.operating_system }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.system_type.id_for_label }}">{{ filter_form.system_type.label }}</label>
+                {{ filter_form.system_type }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.asset_tag.id_for_label }}">{{ filter_form.asset_tag.label }}</label>
+                {{ filter_form.asset_tag }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.team.id_for_label }}">{{ filter_form.team.label }}</label>
+                {{ filter_form.team }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.assigned_to.id_for_label }}">{{ filter_form.assigned_to.label }}</label>
+                {{ filter_form.assigned_to }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.employee_code.id_for_label }}">{{ filter_form.employee_code.label }}</label>
+                {{ filter_form.employee_code }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.ip_address.id_for_label }}">{{ filter_form.ip_address.label }}</label>
+                {{ filter_form.ip_address }}
+            </div>
+        </div>
+        
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="{% url 'asset_list' %}" class="btn btn-secondary">Clear Filters</a>
+        </div>
+    </form>
+</div>
+
+{% if assets %}
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>Serial Number</th>
+                <th>Asset Tag</th>
+                <th>Branch</th>
+                <th>System Type</th>
+                <th>OS</th>
+                <th>IP Address</th>
+                <th>Assigned To</th>
+                <th>Employee Code</th>
+                <th>Team</th>
+                <th>History</th>
+                {% if user.is_staff %}
+                <th>Actions</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for asset in assets %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ asset.asset_tag }}</td>
+                <td class="{% if not asset.branch %}missing-field{% endif %}">{{ asset.branch.name|default:"Branch is missing" }}</td>
+                <td>{{ asset.system_type }}</td>
+                <td>{{ asset.operating_system.name }}</td>
+                <td>
+                    {% with primary_ip=asset.get_primary_ip secondary_ips=asset.get_secondary_ips %}
+                        {% if primary_ip %}
+                            <span {% if secondary_ips %}class="ip-with-extras" title="{% for extra_ip in secondary_ips %}{{ extra_ip.ip_label }}: {{ extra_ip.get_ip_display }}&#10;{% endfor %}"{% endif %} style="{% if secondary_ips %}cursor: pointer; border-bottom: 1px dotted #666;{% endif %}">
+                                {{ primary_ip.get_ip_display }}{% if secondary_ips %} <small style="color: #999;">+{{ secondary_ips.count }}</small>{% endif %}
+                            </span>
+                        {% elif asset.ip_address %}
+                            {{ asset.ip_address.address }}
+                        {% elif asset.manual_ip %}
+                            {{ asset.manual_ip }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    {% endwith %}
+                </td>
+                <td class="{% if not asset.assigned_to %}missing-field{% endif %}">{{ asset.assigned_to|default:"User is missing" }}</td>
+                <td>{{ asset.employee_code|default:"—" }}</td>
+                <td class="{% if not asset.team %}missing-field{% endif %}">
+                    {% if asset.team %}
+                        {% if asset.team.name == "Not Applicable" %}
+                            Not Applicable
+                        {% elif asset.team.parent %}
+                            {{ asset.team.parent.name }} > {{ asset.team.name }}
+                        {% else %}
+                            {{ asset.team.name }}
+                        {% endif %}
+                    {% else %}
+                        Team is missing
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'asset_history' asset.pk %}" class="btn btn-sm btn-info" title="View History">📋</a>
+                </td>
+                {% if user.is_staff %}
+                <td>
+                    <div class="action-buttons">
+                        <a href="{% url 'asset_update' asset.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-warning">Edit</a>
+                        <a href="{% url 'asset_free' asset.pk %}" class="btn btn-sm btn-danger">Free</a>
+                    </div>
+                </td>
+                {% endif %}
+            </tr>
+            {% if asset.accessories.exists %}
+            {% if request.GET.employee_code %}
+            <tr class="accessory-row">
+                <td></td>
+                <td colspan="{% if user.is_staff %}10{% else %}9{% endif %}" style="padding-left: 2rem; background-color: #f8f9fa; border-left: 3px solid #3498db;">
+                    <strong style="color: #2c3e50;">📦 Accessories:</strong>
+                    <span style="color: #555;">
+                    {% for accessory in asset.accessories.all %}
+                        <span style="display: inline-block; margin-right: 1.5rem; padding: 0.25rem 0.75rem; background-color: white; border: 1px solid #dee2e6; border-radius: 4px; margin-top: 0.25rem; margin-bottom: 0.25rem;">
+                            <strong>{{ accessory.accessory_name }}</strong>
+                            {% if accessory.quantity > 1 %}<small>(x{{ accessory.quantity }})</small>{% endif %}
+                            {% if accessory.accessory_details %}<small style="color: #666;"> - {{ accessory.accessory_details }}</small>{% endif %}
+                        </span>{% if not forloop.last %} {% endif %}
+                    {% endfor %}
+                    </span>
+                </td>
+            </tr>
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p>No active assets found.</p>
+</div>
+{% endif %}
+{% endblock %}
+

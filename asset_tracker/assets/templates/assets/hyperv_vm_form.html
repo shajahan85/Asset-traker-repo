@@ -1,0 +1,144 @@
+{% extends "assets/base.html" %}
+
+{% block title %}{% if vm %}Edit{% else %}Create{% endif %} Hyper-V VM - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>{% if vm %}Edit{% else %}Create{% endif %} Hyper-V VM</h1>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+            
+            <div class="mb-3">
+                <label for="{{ form.name.id_for_label }}" class="form-label">VM Name *</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="text-danger">{{ form.name.errors }}</div>
+                {% endif %}
+                {% if form.name.help_text %}
+                    <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.host_machine_select.id_for_label }}" class="form-label">{{ form.host_machine_select.label }}</label>
+                {{ form.host_machine_select }}
+                {% if form.host_machine_select.errors %}
+                    <div class="text-danger">{{ form.host_machine_select.errors }}</div>
+                {% endif %}
+                {% if form.host_machine_select.help_text %}
+                    <small class="form-text text-muted">{{ form.host_machine_select.help_text }}</small>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.host_machine_ip.id_for_label }}" class="form-label">{{ form.host_machine_ip.label }}</label>
+                {{ form.host_machine_ip }}
+                {% if form.host_machine_ip.errors %}
+                    <div class="text-danger">{{ form.host_machine_ip.errors }}</div>
+                {% endif %}
+                {% if form.host_machine_ip.help_text %}
+                    <small class="form-text text-muted">{{ form.host_machine_ip.help_text }}</small>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.manual_ip.id_for_label }}" class="form-label">{{ form.manual_ip.label }}</label>
+                {{ form.manual_ip }}
+                {% if form.manual_ip.errors %}
+                    <div class="text-danger">{{ form.manual_ip.errors }}</div>
+                {% endif %}
+                {% if form.manual_ip.help_text %}
+                    <small class="form-text text-muted">{{ form.manual_ip.help_text }}</small>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.power_status.id_for_label }}" class="form-label">Power Status *</label>
+                {{ form.power_status }}
+                {% if form.power_status.errors %}
+                    <div class="text-danger">{{ form.power_status.errors }}</div>
+                {% endif %}
+                {% if form.power_status.help_text %}
+                    <small class="form-text text-muted">{{ form.power_status.help_text }}</small>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                    <div class="text-danger">{{ form.notes.errors }}</div>
+                {% endif %}
+                {% if form.notes.help_text %}
+                    <small class="form-text text-muted">{{ form.notes.help_text }}</small>
+                {% endif %}
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">{% if vm %}Update{% else %}Create{% endif %} VM</button>
+                <a href="{% url 'hyperv_vm_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Create a mapping of asset IDs to their IPs and BIDC numbers
+const assetData = {
+    {% for asset in form.fields.host_machine_select.queryset %}
+    '{{ asset.pk }}': {
+        'bidc': '{{ asset.asset_tag }}',
+        'ip': '{% if asset.ip_address %}{{ asset.ip_address.address }}{% elif asset.manual_ip %}{{ asset.manual_ip }}{% endif %}'
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+};
+
+// Create reverse mapping: IP to asset ID
+const ipToAssetId = {};
+for (const [assetId, data] of Object.entries(assetData)) {
+    if (data.ip) {
+        ipToAssetId[data.ip] = assetId;
+    }
+}
+
+// When BIDC dropdown changes, update IP field
+document.getElementById('id_host_machine_select').addEventListener('change', function() {
+    const selectedAssetId = this.value;
+    const ipField = document.getElementById('id_host_machine_ip');
+    
+    if (selectedAssetId && assetData[selectedAssetId]) {
+        ipField.value = assetData[selectedAssetId].ip || '';
+    } else {
+        ipField.value = '';
+    }
+});
+
+// When IP field changes, update BIDC dropdown
+document.getElementById('id_host_machine_ip').addEventListener('blur', function() {
+    const enteredIp = this.value.trim();
+    const selectField = document.getElementById('id_host_machine_select');
+    
+    if (enteredIp && ipToAssetId[enteredIp]) {
+        selectField.value = ipToAssetId[enteredIp];
+    }
+});
+</script>
+{% endblock %}

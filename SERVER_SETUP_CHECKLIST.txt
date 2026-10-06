@@ -1,0 +1,132 @@
+=====================================
+ASSET TRACKER - SERVER DEPLOYMENT
+Server: 192.168.10.29:8081
+Location: E:\Asset-tracker tool
+=====================================
+
+PHASE 1: COPY FILES TO SERVER
+□ Remote desktop to 192.168.10.29
+□ Create folder: E:\Asset-tracker tool
+□ Copy all files from D:\Asset tracker to E:\Asset-tracker tool
+  (exclude: venv, __pycache__, .git folders)
+
+PHASE 2: INSTALL PYTHON PACKAGES (On Server)
+Open PowerShell as Administrator:
+
+□ cd "E:\Asset-tracker tool"
+□ python -m venv venv
+□ .\venv\Scripts\Activate.ps1
+□ pip install --upgrade pip
+□ pip install -r requirements.txt
+□ pip install wfastcgi
+□ wfastcgi-enable
+  → COPY THE OUTPUT PATH! Example:
+    E:\Asset-tracker tool\venv\Scripts\python.exe|E:\Asset-tracker tool\venv\Lib\site-packages\wfastcgi.py
+
+PHASE 3: CONFIGURE ENVIRONMENT
+□ Copy-Item ".env.example" -Destination ".env"
+□ Edit .env file:
+  □ Set DEBUG=False
+  □ Set ALLOWED_HOSTS=192.168.10.29,localhost,127.0.0.1
+  □ Generate new SECRET_KEY
+  □ Configure database settings
+
+PHASE 4: RUN DJANGO SETUP
+□ python manage.py migrate
+□ python manage.py collectstatic --noinput
+□ python manage.py createsuperuser
+  Username: _____________
+  Email: _____________
+  Password: _____________
+
+PHASE 5: SET PERMISSIONS
+□ icacls "E:\Asset-tracker tool" /grant "IIS_IUSRS:(OI)(CI)F" /T
+□ icacls "E:\Asset-tracker tool\media" /grant "IIS_IUSRS:(OI)(CI)F" /T
+□ icacls "E:\Asset-tracker tool\staticfiles" /grant "IIS_IUSRS:(OI)(CI)F" /T
+
+PHASE 6: CONFIGURE IIS
+Open IIS Manager (inetmgr):
+
+CREATE APPLICATION POOL:
+□ Right-click Application Pools → Add Application Pool
+□ Name: AssetTrackerPool
+□ .NET CLR Version: No Managed Code
+□ Managed Pipeline Mode: Integrated
+□ Click OK
+
+□ Right-click AssetTrackerPool → Advanced Settings
+  □ Start Mode: AlwaysRunning
+  □ Idle Time-out: 0
+  □ Click OK
+
+CREATE WEBSITE:
+□ Right-click Sites → Add Website
+□ Site name: AssetTracker
+□ Application pool: AssetTrackerPool
+□ Physical path: E:\Asset-tracker tool
+□ Binding:
+  □ Type: http
+  □ IP address: 192.168.10.29 (or All Unassigned)
+  □ Port: 8081
+□ Click OK
+
+ADD HANDLER MAPPING:
+□ Click AssetTracker site
+□ Double-click Handler Mappings
+□ Click Add Module Mapping
+□ Request path: *
+□ Module: FastCgiModule
+□ Executable: [PASTE wfastcgi-enable output here]
+  E:\Asset-tracker tool\venv\Scripts\python.exe|E:\Asset-tracker tool\venv\Lib\site-packages\wfastcgi.py
+□ Name: Django Handler
+□ Click Request Restrictions
+□ UNCHECK: "Invoke handler only if request is mapped to:"
+□ Click OK → Yes
+
+PHASE 7: VERIFY WEB.CONFIG
+□ Open: E:\Asset-tracker tool\web.config
+□ Verify paths are correct:
+  □ E:\Asset-tracker tool\venv\Scripts\python.exe
+  □ E:\Asset-tracker tool\venv\Lib\site-packages\wfastcgi.py
+  □ PYTHONPATH: E:\Asset-tracker tool
+
+PHASE 8: RESTART AND TEST
+□ iisreset /restart
+□ Open browser: http://192.168.10.29:8081/
+□ Test login
+□ Test admin panel: http://192.168.10.29:8081/admin/
+
+PHASE 9: TROUBLESHOOTING (If errors occur)
+□ Check IIS logs:
+  Get-Content "C:\inetpub\logs\LogFiles\W3SVC*\*.log" | Select-Object -Last 50
+□ Check application logs:
+  Get-Content "E:\Asset-tracker tool\authentication.log" -Tail 50
+□ Verify FastCGI Settings in IIS
+□ Check folder permissions
+□ Verify Python path is correct
+
+OPTIONAL: INSTALL REDIS (For background tasks)
+□ Download: https://github.com/tporadowski/redis/releases
+□ Install Redis-x64-5.0.14.1.msi
+□ redis-server --service-start
+□ redis-cli ping (should return PONG)
+□ Configure Celery services
+
+=====================================
+DEPLOYMENT COMPLETED!
+Date: _____________
+By: _____________
+Issues: _____________
+=====================================
+
+USEFUL COMMANDS:
+- Restart IIS: iisreset /restart
+- Activate venv: .\venv\Scripts\Activate.ps1
+- Run migrations: python manage.py migrate
+- Collect static: python manage.py collectstatic --noinput
+- View logs: Get-Content "C:\inetpub\logs\LogFiles\W3SVC*\*.log" | Select-Object -Last 50
+
+ACCESS URLS:
+- Main Site: http://192.168.10.29:8081/
+- Admin Panel: http://192.168.10.29:8081/admin/
+- Login: http://192.168.10.29:8081/login/

@@ -1,0 +1,43 @@
+========================================
+DEPLOY THIS FIX NOW - CRITICAL
+========================================
+
+This fixes the "fields disappearing" bug when editing assets.
+
+QUICK DEPLOY:
+-------------
+
+# On Linux server:
+cd /var/www/asset_tracker/
+
+# Backup
+cp assets/forms/asset_forms.py assets/forms/asset_forms.py.backup_$(date +%Y%m%d_%H%M%S)
+
+# Deploy
+cp /path/to/URGENT_ANJANA_FIX/asset_forms.py /var/www/asset_tracker/assets/forms/
+
+# Restart
+sudo systemctl restart asset_tracker
+
+# Verify
+systemctl status asset_tracker
+
+
+WHAT THIS FIXES:
+----------------
+✓ Fields no longer disappear when editing
+✓ Current values always show in dropdowns
+✓ No validation errors
+✓ Data saves properly
+✓ Works for ALL assets (Anjana, Sankar, Kharunnisa, everyone)
+
+
+TEST IMMEDIATELY:
+-----------------
+1. Edit any of Anjana's assets
+2. All fields should show current values
+3. Change something (e.g., employee code)
+4. Click Save
+5. Should save without errors
+
+========================================

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Asset Tracker{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/mobile.css' %}">
+    <style>
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="{% url 'asset_list' %}" class="navbar-brand">Asset Tracker</a>
+            <ul class="navbar-nav">
+                <li><a href="{% url 'asset_list' %}" {% if request.resolver_match.url_name == 'asset_list' %}class="active"{% endif %}>Active Assets</a></li>
+                <li><a href="{% url 'power_monitoring:report' %}" {% if request.resolver_match.url_name == 'report' %}class="active"{% endif %}>Online Systems</a></li>
+                <li><a href="{% url 'freed_systems' %}" {% if request.resolver_match.url_name == 'freed_systems' %}class="active"{% endif %}>Free Systems</a></li>
+                <li><a href="{% url 'scrapped_items' %}" {% if request.resolver_match.url_name == 'scrapped_items' %}class="active"{% endif %}>Scrapped Items</a></li>
+                <li><a href="{% url 'free_ips' %}" {% if request.resolver_match.url_name == 'free_ips' %}class="active"{% endif %}>Free IPs</a></li>
+                <li><a href="{% url 'warranty' %}" {% if request.resolver_match.url_name == 'warranty' %}class="active"{% endif %}>Warranty</a></li>
+                <li><a href="{% url 'employee_search' %}" {% if request.resolver_match.url_name == 'employee_search' %}class="active"{% endif %}>Employee Search</a></li>
+                <li><a href="{% url 'branch_list' %}" {% if 'branch' in request.resolver_match.url_name %}class="active"{% endif %}>Branches</a></li>
+                {% if user.is_staff %}
+                <li><a href="{% url 'hyperv_vm_list' %}" {% if 'hyperv_vm' in request.resolver_match.url_name %}class="active"{% endif %}>Virtual Machines</a></li>
+                <li><a href="{% url 'network_device_list' %}" {% if 'network_device' in request.resolver_match.url_name %}class="active"{% endif %}>Network Devices</a></li>
+                <li><a href="{% url 'server_controller_list' %}" {% if 'server_controller' in request.resolver_match.url_name %}class="active"{% endif %}>Server Controllers</a></li>
+                <li><a href="{% url 'testing_device_list' %}" {% if 'testing_device' in request.resolver_match.url_name %}class="active"{% endif %}>Testing Devices</a></li>
+                <li><a href="{% url 'operating_systems' %}" {% if request.resolver_match.url_name == 'operating_systems' %}class="active"{% endif %}>Operating Systems</a></li>
+                <li><a href="{% url 'asset_import' %}" {% if request.resolver_match.url_name == 'asset_import' %}class="active"{% endif %}>Import Assets</a></li>
+                {% endif %}
+            </ul>
+            <div class="navbar-user">
+                <span class="user-info">{{ user.username }}</span>
+                <a href="{% url 'logout' %}" class="btn-logout" onclick="return confirm('Are you sure you want to logout?')">Logout</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="content-wrapper">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+    
+    <!-- JavaScript temporarily disabled to fix freeze issue -->
+    <!-- <script src="{% static 'assets/js/main.js' %}?v=2"></script> -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

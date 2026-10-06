@@ -1,0 +1,89 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Delete Freed System - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>Delete Freed System</h1>
+    <a href="{% url 'freed_systems' %}" class="btn btn-secondary">Back to Freed Systems</a>
+</div>
+
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <div class="card-header bg-danger text-white">
+        <h3 style="margin: 0;">⚠️ Confirm Deletion</h3>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <strong>Warning:</strong> This action will permanently delete the freed system from the database. This cannot be undone.
+        </div>
+
+        <h4>Asset Details:</h4>
+        <table class="table">
+            <tr>
+                <th style="width: 30%;">Asset Tag:</th>
+                <td><strong>{{ asset.asset_tag }}</strong></td>
+            </tr>
+            <tr>
+                <th>System Type:</th>
+                <td>{{ asset.system_type }}</td>
+            </tr>
+            <tr>
+                <th>Operating System:</th>
+                <td>{{ asset.operating_system.name|default:"N/A" }}</td>
+            </tr>
+            <tr>
+                <th>IP Address:</th>
+                <td>
+                    {% if asset.ip_address %}
+                        {{ asset.ip_address.address }}
+                    {% elif asset.manual_ip %}
+                        {{ asset.manual_ip }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Health Status:</th>
+                <td>
+                    {% if asset.health_status == 'healthy' %}
+                        <span style="color: green;">✓ Healthy</span>
+                    {% elif asset.health_status == 'defective' %}
+                        <span style="color: red;">⚠ Defective</span>
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Freed Date:</th>
+                <td>{{ asset.freed_date|date:"Y-m-d H:i" }}</td>
+            </tr>
+        </table>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.help_text %}
+                <small class="form-text text-muted">{{ form.password.help_text }}</small>
+                {% endif %}
+                {% if form.password.errors %}
+                <div class="text-danger">
+                    {% for error in form.password.errors %}
+                    <small>{{ error }}</small>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                <a href="{% url 'freed_systems' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

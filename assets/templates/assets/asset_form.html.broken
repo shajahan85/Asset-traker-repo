@@ -1,0 +1,1242 @@
+{% extends "assets/base.html" %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Asset - Asset Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+.os-input-wrapper {
+    position: relative;
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.os-dropdown-container,
+.os-manual-container {
+    flex: 1;
+    transition: all 0.3s ease;
+}
+
+.os-manual-container input {
+    height: 100%;
+}
+
+.btn-os-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.btn-os-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.btn-os-toggle:active {
+    transform: translateY(0);
+}
+
+.btn-os-toggle.active {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    box-shadow: 0 2px 4px rgba(245, 87, 108, 0.3);
+}
+
+.btn-os-toggle.active:hover {
+    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+    box-shadow: 0 4px 8px rgba(245, 87, 108, 0.4);
+}
+
+#toggleOSIcon {
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+}
+
+.btn-os-toggle.active #toggleOSIcon {
+    transform: rotate(180deg);
+}
+
+.os-help-text {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+    transition: all 0.3s ease;
+}
+
+.os-help-text.manual-mode {
+    color: #f5576c;
+    font-weight: 500;
+}
+
+/* Animation for smooth transitions */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.os-dropdown-container,
+.os-manual-container {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .os-input-wrapper {
+        flex-direction: column;
+    }
+    
+    .btn-os-toggle {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>{% if form.instance.pk %}Edit{% else %}Create New{% endif %} Asset</h1>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+    
+    <div class="form-group">
+        <label for="{{ form.asset_tag.id_for_label }}" class="required">{{ form.asset_tag.label }}</label>
+        {{ form.asset_tag }}
+        {% if form.asset_tag.errors %}
+            {% for error in form.asset_tag.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+        {% if form.asset_tag.help_text %}
+            <div class="help-text">{{ form.asset_tag.help_text }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="form-group">
+        <label for="{{ form.system_type.id_for_label }}" class="required">{{ form.system_type.label }}</label>
+        {{ form.system_type }}
+        {% if form.system_type.errors %}
+            {% for error in form.system_type.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <div class="form-group" id="hardware_serial_number_group">
+        <label for="{{ form.hardware_serial_number.id_for_label }}">{{ form.hardware_serial_number.label }}</label>
+        {{ form.hardware_serial_number }}
+        {% if form.hardware_serial_number.errors %}
+            {% for error in form.hardware_serial_number.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+        <div class="help-text">Required for Laptop and All-in-One PC only</div>
+    </div>
+    
+    <div class="form-group">
+        <label for="{{ form.manufacturer.id_for_label }}">{{ form.manufacturer.label }}</label>
+        {{ form.manufacturer }}
+        {% if form.manufacturer.errors %}
+            {% for error in form.manufacturer.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <div class="form-group">
+        <label for="{{ form.operating_system.id_for_label }}" class="required">{{ form.operating_system.label }}</label>
+        <div class="os-input-wrapper">
+            <div class="os-dropdown-container" id="osDropdownContainer">
+                {{ form.operating_system }}
+            </div>
+            <div class="os-manual-container" id="osManualContainer" style="display: none;">
+                <input type="text" id="osManualEntry" class="form-control" placeholder="e.g., Windows Server 2022, macOS Ventura, Red Hat Linux">
+            </div>
+            <button type="button" class="btn-os-toggle" onclick="toggleOSManualEntry()" id="toggleOSButton">
+                <span id="toggleOSIcon">✏️</span>
+                <span id="toggleOSText">Manual Entry</span>
+            </button>
+        </div>
+        <div class="os-help-text" id="osHelpText">
+            Select from existing operating systems or click "Manual Entry" to add a new one
+        </div>
+        {% if form.operating_system.errors %}
+            {% for error in form.operating_system.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <div class="form-group">
+        <label for="{{ form.primary_ip_type.id_for_label }}">IP Address</label>
+        <div style="margin-bottom: 1rem;">
+            {% for choice in form.primary_ip_type %}
+                <div class="form-check form-check-inline" style="margin-right: 2rem;">
+                    {{ choice.tag }}
+                    <label class="form-check-label" for="{{ choice.id_for_label }}" style="margin-left: 0.5rem;">
+                        {{ choice.choice_label }}
+                    </label>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div id="primary-managed-ip-group" style="margin-top: 0.75rem;">
+            <label for="{{ form.ip_address.id_for_label }}">{{ form.ip_address.label }}</label>
+            {{ form.ip_address }}
+            {% if form.ip_address.errors %}
+                {% for error in form.ip_address.errors %}
+                    <div class="error-message">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        
+        <div id="primary-manual-ip-group" style="display: none; margin-top: 0.75rem;">
+            <label for="{{ form.manual_ip.id_for_label }}">{{ form.manual_ip.label }}</label>
+            {{ form.manual_ip }}
+            {% if form.manual_ip.errors %}
+                {% for error in form.manual_ip.errors %}
+                    <div class="error-message">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Additional IP Addresses Section -->
+    <div class="form-section">
+        <h5>Additional IP Addresses</h5>
+        <p class="text-muted">Add supplementary IP addresses (e.g., WiFi, Mobile, VPN)</p>
+        
+        <!-- Formset Management Form -->
+        {{ additional_ip_formset.management_form }}
+        
+        <!-- Formset non-field errors -->
+        {% if additional_ip_formset.non_form_errors %}
+            <div class="alert alert-danger">
+                {{ additional_ip_formset.non_form_errors }}
+            </div>
+        {% endif %}
+        
+        <!-- Additional IP Forms Container -->
+        <div id="additional-ip-forms">
+            {% for form in additional_ip_formset %}
+                <div class="additional-ip-form border rounded p-3 mb-3" data-form-index="{{ forloop.counter0 }}">
+                    <!-- Deletion checkbox (hidden by default) -->
+                    {% if form.instance.pk %}
+                        <div style="display:none;">
+                            {{ form.DELETE }}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Hidden ID field for existing forms -->
+                    {% if form.instance.pk %}
+                        {{ form.id }}
+                    {% endif %}
+                    
+                    <!-- IP Label -->
+                    <div class="form-group">
+                        <label for="{{ form.ip_label.id_for_label }}">{{ form.ip_label.label }}</label>
+                        {{ form.ip_label }}
+                        {% if form.ip_label.errors %}
+                            {% for error in form.ip_label.errors %}
+                                <div class="error-message">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- IP Type Selection -->
+                    <div class="form-group">
+                        <label>IP Type</label>
+                        <div style="margin-bottom: 1rem;">
+                            {% for radio in form.ip_type %}
+                                <div class="form-check form-check-inline" style="margin-right: 2rem;">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}" style="margin-left: 0.5rem;">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Managed IP Field -->
+                    <div class="form-group additional-managed-ip-group" style="margin-top: 0.75rem;">
+                        <label for="{{ form.ip_address.id_for_label }}">{{ form.ip_address.label }}</label>
+                        {{ form.ip_address }}
+                        {% if form.ip_address.errors %}
+                            {% for error in form.ip_address.errors %}
+                                <div class="error-message">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Manual IP Field -->
+                    <div class="form-group additional-manual-ip-group" style="display:none; margin-top: 0.75rem;">
+                        <label for="{{ form.manual_ip.id_for_label }}">{{ form.manual_ip.label }}</label>
+                        {{ form.manual_ip }}
+                        {% if form.manual_ip.errors %}
+                            {% for error in form.manual_ip.errors %}
+                                <div class="error-message">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Remove Button -->
+                    <button type="button" class="btn btn-sm btn-danger remove-additional-ip">
+                        Remove
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Add Button -->
+        <button type="button" class="btn btn-secondary" id="add-additional-ip">
+            + Add Additional IP
+        </button>
+        
+        <!-- Empty Form Template (hidden) -->
+        <div id="empty-additional-ip-form" style="display:none;">
+            {% with form=additional_ip_formset.empty_form %}
+                <div class="additional-ip-form border rounded p-3 mb-3" data-form-index="__prefix__">
+                    <!-- IP Label -->
+                    <div class="form-group">
+                        <label for="{{ form.ip_label.id_for_label }}">{{ form.ip_label.label }}</label>
+                        {{ form.ip_label }}
+                    </div>
+                    
+                    <!-- IP Type Selection -->
+                    <div class="form-group">
+                        <label>IP Type</label>
+                        <div style="margin-bottom: 1rem;">
+                            {% for radio in form.ip_type %}
+                                <div class="form-check form-check-inline" style="margin-right: 2rem;">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}" style="margin-left: 0.5rem;">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Managed IP Field -->
+                    <div class="form-group additional-managed-ip-group" style="margin-top: 0.75rem;">
+                        <label for="{{ form.ip_address.id_for_label }}">{{ form.ip_address.label }}</label>
+                        {{ form.ip_address }}
+                    </div>
+                    
+                    <!-- Manual IP Field -->
+                    <div class="form-group additional-manual-ip-group" style="display:none; margin-top: 0.75rem;">
+                        <label for="{{ form.manual_ip.id_for_label }}">{{ form.manual_ip.label }}</label>
+                        {{ form.manual_ip }}
+                    </div>
+                    
+                    <!-- Remove Button -->
+                    <button type="button" class="btn btn-sm btn-danger remove-additional-ip">
+                        Remove
+                    </button>
+                </div>
+            {% endwith %}
+        </div>
+    </div>
+    
+    <!-- Additional IP Addresses Section -->
+    <div class="form-section">
+        <h5>Additional IP Addresses</h5>
+        <p class="text-muted">Add supplementary IP addresses (e.g., WiFi, Mobile, VPN)</p>
+        
+        <!-- Formset Management Form -->
+        {{ additional_ip_formset.management_form }}
+        
+        <!-- Additional IP Forms Container -->
+        <div id="additional-ip-forms">
+            {% for form in additional_ip_formset %}
+                <div class="additional-ip-form border rounded p-3 mb-3" data-form-index="{{ forloop.counter0 }}">
+                    <!-- Deletion checkbox (hidden by default) -->
+                    {% if form.instance.pk %}
+                        <div style="display:none;">
+                            {{ form.DELETE }}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- IP Label -->
+                    <div class="form-group">
+                        {{ form.ip_label.label_tag }}
+                        {{ form.ip_label }}
+                        {% if form.ip_label.errors %}
+                            <div class="text-danger">{{ form.ip_label.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- IP Type Selection -->
+                    <div class="form-group">
+                        <label>IP Type</label>
+                        <div class="radio-group">
+                            {% for radio in form.ip_type %}
+                                <div class="form-check form-check-inline">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                        {{ radio.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Managed IP Field -->
+                    <div class="form-group additional-managed-ip-group">
+                        {{ form.ip_address.label_tag }}
+                        {{ form.ip_address }}
+                        {% if form.ip_address.errors %}
+                            <div class="text-danger">{{ form.ip_address.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Manual IP Field -->
+                    <div class="form-group additional-manual-ip-group" style="display:none;">
+                        {{ form.manual_ip.label_tag }}
+                        {{ form.manual_ip }}
+                        {% if form.manual_ip.errors %}
+                            <div class="text-danger">{{ form.manual_ip.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Remove Button -->
+                    <button type="button" class="btn btn-sm btn-danger remove-additional-ip">
+                        Remove
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Add Button -->
+        <button type="button" class="btn btn-secondary" id="add-additional-ip">
+            + Add Additional IP
+        </button>
+        
+        <!-- Empty Form Template (hidden) -->
+        <div id="empty-additional-ip-form" style="display:none;">
+            <!-- Clone of the form structure with __prefix__ placeholder -->
+            <div class="additional-ip-form border rounded p-3 mb-3">
+                {{ additional_ip_formset.empty_form.ip_label.label_tag }}
+                {{ additional_ip_formset.empty_form.ip_label }}
+                
+                <div class="form-group">
+                    <label>IP Type</label>
+                    <div class="radio-group">
+                        {% for radio in additional_ip_formset.empty_form.ip_type %}
+                            <div class="form-check form-check-inline">
+                                {{ radio.tag }}
+                                <label class="form-check-label" for="{{ radio.id_for_label }}">
+                                    {{ radio.choice_label }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="form-group additional-managed-ip-group">
+                    {{ additional_ip_formset.empty_form.ip_address.label_tag }}
+                    {{ additional_ip_formset.empty_form.ip_address }}
+                </div>
+                
+                <div class="form-group additional-manual-ip-group" style="display:none;">
+                    {{ additional_ip_formset.empty_form.manual_ip.label_tag }}
+                    {{ additional_ip_formset.empty_form.manual_ip }}
+                </div>
+                
+                <button type="button" class="btn btn-sm btn-danger remove-additional-ip">
+                    Remove
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label for="{{ form.branch.id_for_label }}" class="required">{{ form.branch.label }}</label>
+        {{ form.branch }}
+        {% if form.branch.errors %}
+            {% for error in form.branch.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+        {% if form.branch.help_text %}
+            <div class="help-text">{{ form.branch.help_text }}</div>
+        {% endif %}
+    </div>
+    
+    <div class="form-group">
+        <label for="{{ form.assigned_to.id_for_label }}">{{ form.assigned_to.label }}</label>
+        {{ form.assigned_to }}
+        {% if form.assigned_to.errors %}
+            {% for error in form.assigned_to.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <div class="form-group">
+        <label for="{{ form.parent_team.id_for_label }}">{{ form.parent_team.label }}</label>
+        {{ form.parent_team }}
+        {% if form.parent_team.errors %}
+            {% for error in form.parent_team.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <div class="form-group" id="sub_team_group">
+        <label for="{{ form.sub_team.id_for_label }}">{{ form.sub_team.label }}</label>
+        {{ form.sub_team }}
+        {% if form.sub_team.errors %}
+            {% for error in form.sub_team.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    {{ form.team }}
+    
+    <div class="form-group">
+        <label for="{{ form.warranty_expiration.id_for_label }}">{{ form.warranty_expiration.label }}</label>
+        {{ form.warranty_expiration }}
+        {% if form.warranty_expiration.errors %}
+            {% for error in form.warranty_expiration.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <div class="form-group">
+        <label for="{{ form.particulars.id_for_label }}">{{ form.particulars.label }}</label>
+        {{ form.particulars }}
+        {% if form.particulars.errors %}
+            {% for error in form.particulars.errors %}
+                <div class="error-message">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    {% if form.instance.pk %}
+    <!-- Existing Attachments Section -->
+    <div class="form-group">
+        <label>Existing Attachments</label>
+        {% if form.instance.attachments.all %}
+            <div class="attachments-list">
+                {% for attachment in form.instance.attachments.all %}
+                    <div class="attachment-item">
+                        <span class="attachment-name">
+                            <a href="{{ attachment.file.url }}" target="_blank">{{ attachment.filename }}</a>
+                        </span>
+                        <span class="attachment-date">Uploaded: {{ attachment.uploaded_at|date:"Y-m-d H:i" }}</span>
+                        <form method="post" action="{% url 'delete_attachment' attachment.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this attachment?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-attachments">No attachments yet.</p>
+        {% endif %}
+    </div>
+    
+    <!-- File Upload Section -->
+    <div class="form-group">
+        <label for="attachment_file">Add New Attachment</label>
+        <input type="file" name="attachment_file" id="attachment_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.doc,.docx,.xls,.xlsx,.txt,.zip">
+        <div class="help-text">Maximum file size: 10MB. Allowed types: PDF, images (JPG, PNG, GIF, BMP), documents (DOC, DOCX, XLS, XLSX, TXT, ZIP)</div>
+    </div>
+    {% else %}
+    <!-- File Upload Section for New Assets -->
+    <div class="form-group">
+        <label for="attachment_file">Add Attachment (Optional)</label>
+        <input type="file" name="attachment_file" id="attachment_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.doc,.docx,.xls,.xlsx,.txt,.zip">
+        <div class="help-text">Maximum file size: 10MB. Allowed types: PDF, images (JPG, PNG, GIF, BMP), documents (DOC, DOCX, XLS, XLSX, TXT, ZIP)</div>
+    </div>
+    {% endif %}
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+            {% if form.instance.pk %}Update{% else %}Create{% endif %} Asset
+        </button>
+        <a href="{% url 'asset_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// OS Manual Entry Toggle with smooth animations
+let osManualEntryMode = false;
+
+function toggleOSManualEntry() {
+    const osDropdownContainer = document.getElementById('osDropdownContainer');
+    const osManualContainer = document.getElementById('osManualContainer');
+    const osManualInput = document.getElementById('osManualEntry');
+    const toggleButton = document.getElementById('toggleOSButton');
+    const toggleIcon = document.getElementById('toggleOSIcon');
+    const toggleText = document.getElementById('toggleOSText');
+    const osHelpText = document.getElementById('osHelpText');
+    const osSelect = document.getElementById('id_operating_system');
+    
+    osManualEntryMode = !osManualEntryMode;
+    
+    if (osManualEntryMode) {
+        // Switch to manual entry mode
+        osDropdownContainer.style.display = 'none';
+        osManualContainer.style.display = 'block';
+        toggleButton.classList.add('active');
+        toggleIcon.textContent = '📋';
+        toggleText.textContent = 'Use Dropdown';
+        osHelpText.textContent = 'Enter a custom OS name - it will be automatically added to the system';
+        osHelpText.classList.add('manual-mode');
+        
+        // Clear dropdown selection and focus on input
+        osSelect.value = '';
+        setTimeout(() => osManualInput.focus(), 100);
+    } else {
+        // Switch back to dropdown mode
+        osDropdownContainer.style.display = 'block';
+        osManualContainer.style.display = 'none';
+        toggleButton.classList.remove('active');
+        toggleIcon.textContent = '✏️';
+        toggleText.textContent = 'Manual Entry';
+        osHelpText.textContent = 'Select from existing operating systems or click "Manual Entry" to add a new one';
+        osHelpText.classList.remove('manual-mode');
+        
+        // Clear manual input
+        osManualInput.value = '';
+    }
+}
+
+// IP Type Radio Button Handler
+function handleIPTypeChange() {
+    const ipTypeRadios = document.getElementsByName('primary_ip_type');
+    const ipManagedContainer = document.getElementById('primary-managed-ip-group');
+    const ipManualContainer = document.getElementById('primary-manual-ip-group');
+    const ipSelect = document.getElementById('id_ip_address');
+    const manualIpInput = document.getElementById('id_manual_ip');
+    
+    let selectedType = 'managed'; // default
+    for (const radio of ipTypeRadios) {
+        if (radio.checked) {
+            selectedType = radio.value;
+            break;
+        }
+    }
+    
+    if (selectedType === 'managed') {
+        ipManagedContainer.style.display = 'block';
+        ipManualContainer.style.display = 'none';
+        // Clear manual IP when switching to managed
+        if (manualIpInput) manualIpInput.value = '';
+    } else {
+        ipManagedContainer.style.display = 'none';
+        ipManualContainer.style.display = 'block';
+        // Clear managed IP selection when switching to manual
+        if (ipSelect) ipSelect.value = '';
+    }
+}
+
+// Secondary IP Type Radio Button Handler
+function handleSecondaryIPTypeChange() {
+    const secondaryIpTypeRadios = document.getElementsByName('secondary_ip_type');
+    const secondaryIpManagedContainer = document.getElementById('secondaryIpManagedContainer');
+    const secondaryIpManualContainer = document.getElementById('secondaryIpManualContainer');
+    const secondaryIpSelect = document.getElementById('id_secondary_ip_address');
+    const secondaryManualIpInput = document.getElementById('id_secondary_manual_ip');
+    
+    let selectedType = 'managed'; // default
+    for (const radio of secondaryIpTypeRadios) {
+        if (radio.checked) {
+            selectedType = radio.value;
+            break;
+        }
+    }
+    
+    if (selectedType === 'managed') {
+        secondaryIpManagedContainer.style.display = 'block';
+        secondaryIpManualContainer.style.display = 'none';
+        // Clear manual IP when switching to managed
+        if (secondaryManualIpInput) secondaryManualIpInput.value = '';
+    } else {
+        secondaryIpManagedContainer.style.display = 'none';
+        secondaryIpManualContainer.style.display = 'block';
+        // Clear managed IP selection when switching to manual
+        if (secondaryIpSelect) secondaryIpSelect.value = '';
+    }
+}
+
+// Handle form submission to process manual OS entry
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const osSelect = document.getElementById('id_operating_system');
+    const osManualInput = document.getElementById('osManualEntry');
+    
+    form.addEventListener('submit', function(e) {
+        if (osManualEntryMode && osManualInput.value.trim()) {
+            // Create a hidden input with the manual OS name
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'os_manual_entry';
+            hiddenInput.value = osManualInput.value.trim();
+            form.appendChild(hiddenInput);
+        }
+    });
+    
+    // Set up IP type radio button listeners
+    const ipTypeRadios = document.getElementsByName('primary_ip_type');
+    ipTypeRadios.forEach(radio => {
+        radio.addEventListener('change', handleIPTypeChange);
+    });
+    
+    // Set up secondary IP type radio button listeners
+    const secondaryIpTypeRadios = document.getElementsByName('secondary_ip_type');
+    secondaryIpTypeRadios.forEach(radio => {
+        radio.addEventListener('change', handleSecondaryIPTypeChange);
+    });
+    
+    // Check if editing an asset with manual IP - ensure proper radio is checked
+    const manualIpInput = document.getElementById('id_manual_ip');
+    if (manualIpInput && manualIpInput.value.trim()) {
+        // Find and check the manual radio button
+        const manualRadio = document.querySelector('input[name="primary_ip_type"][value="manual"]');
+        if (manualRadio && !manualRadio.checked) {
+            manualRadio.checked = true;
+        }
+    }
+    
+    // Check if editing an asset with manual secondary IP
+    const secondaryManualIpInput = document.getElementById('id_secondary_manual_ip');
+    if (secondaryManualIpInput && secondaryManualIpInput.value.trim()) {
+        const secondaryManualRadio = document.querySelector('input[name="secondary_ip_type"][value="manual"]');
+        if (secondaryManualRadio && !secondaryManualRadio.checked) {
+            secondaryManualRadio.checked = true;
+        }
+    }
+    
+    // Check if editing an asset with managed secondary IP
+    const secondaryIpSelect = document.getElementById('id_secondary_ip_address');
+    if (secondaryIpSelect && secondaryIpSelect.value) {
+        const secondaryManagedRadio = document.querySelector('input[name="secondary_ip_type"][value="managed"]');
+        if (secondaryManagedRadio && !secondaryManagedRadio.checked) {
+            secondaryManagedRadio.checked = true;
+        }
+    }
+    
+    // Initialize IP field visibility based on current selection (after radio buttons are set)
+    handleIPTypeChange();
+    handleSecondaryIPTypeChange();
+    
+    // Additional IP formset functionality
+    setupAdditionalIPFormset();
+});
+
+// Additional IP Formset Management
+function setupAdditionalIPFormset() {
+    const formsContainer = document.getElementById('additional-ip-forms');
+    const addButton = document.getElementById('add-additional-ip');
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+    
+    if (!formsContainer || !addButton || !totalFormsInput) {
+        return; // Elements not present, skip setup
+    }
+    
+    // Setup toggles for existing forms
+    document.querySelectorAll('.additional-ip-form').forEach(setupAdditionalIPTypeToggle);
+    
+    // Setup remove buttons for existing forms
+    document.querySelectorAll('.remove-additional-ip').forEach(button => {
+        setupRemoveButton(button.closest('.additional-ip-form'));
+    });
+    
+    // Add button handler
+    addButton.addEventListener('click', function() {
+        const formIndex = parseInt(totalFormsInput.value);
+        
+        // Create new form HTML
+        const newFormHtml = `
+            <div class="additional-ip-form border rounded p-3 mb-3" data-form-index="${formIndex}">
+                <!-- IP Label -->
+                <div class="form-group">
+                    <label for="id_asset_ip_addresses-${formIndex}-ip_label">Label</label>
+                    <input type="text" name="asset_ip_addresses-${formIndex}-ip_label" class="form-control" placeholder="e.g., WiFi, Mobile, VPN" id="id_asset_ip_addresses-${formIndex}-ip_label">
+                </div>
+                
+                <!-- IP Type Selection -->
+                <div class="form-group">
+                    <label>IP Type</label>
+                    <div class="radio-group">
+                        <div class="form-check form-check-inline">
+                            <input type="radio" name="asset_ip_addresses-${formIndex}-ip_type" value="managed" class="form-check-input ip-type-radio" id="id_asset_ip_addresses-${formIndex}-ip_type_0" checked>
+                            <label class="form-check-label" for="id_asset_ip_addresses-${formIndex}-ip_type_0">
+                                Managed IP
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="radio" name="asset_ip_addresses-${formIndex}-ip_type" value="manual" class="form-check-input ip-type-radio" id="id_asset_ip_addresses-${formIndex}-ip_type_1">
+                            <label class="form-check-label" for="id_asset_ip_addresses-${formIndex}-ip_type_1">
+                                Manual IP
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Managed IP Field -->
+                <div class="form-group additional-managed-ip-group">
+                    <label for="id_asset_ip_addresses-${formIndex}-ip_address">IP Address</label>
+                    <select name="asset_ip_addresses-${formIndex}-ip_address" class="form-control" id="id_asset_ip_addresses-${formIndex}-ip_address">
+                        <option value="">Select IP Address</option>
+                    </select>
+                </div>
+                
+                <!-- Manual IP Field -->
+                <div class="form-group additional-manual-ip-group" style="display:none;">
+                    <label for="id_asset_ip_addresses-${formIndex}-manual_ip">IP Address</label>
+                    <input type="text" name="asset_ip_addresses-${formIndex}-manual_ip" class="form-control" placeholder="e.g., 192.168.1.100" id="id_asset_ip_addresses-${formIndex}-manual_ip">
+                </div>
+                
+                <!-- Remove Button -->
+                <button type="button" class="btn btn-sm btn-danger remove-additional-ip">
+                    Remove
+                </button>
+            </div>
+        `;
+        
+        // Create new form div
+        const newFormDiv = document.createElement('div');
+        newFormDiv.innerHTML = newFormHtml.trim();
+        const newForm = newFormDiv.firstChild;
+        
+        // Append to container
+        formsContainer.appendChild(newForm);
+        
+        // Update total forms count
+        totalFormsInput.value = formIndex + 1;
+        
+        // Setup IP type toggle for new form
+        setupAdditionalIPTypeToggle(newForm);
+        
+        // Setup remove button
+        setupRemoveButton(newForm);
+    });
+}
+
+function setupAdditionalIPTypeToggle(formDiv) {
+    const ipTypeRadios = formDiv.querySelectorAll('.ip-type-radio');
+    const managedGroup = formDiv.querySelector('.additional-managed-ip-group');
+    const manualGroup = formDiv.querySelector('.additional-manual-ip-group');
+    
+    ipTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'managed') {
+                managedGroup.style.display = 'block';
+                manualGroup.style.display = 'none';
+            } else {
+                managedGroup.style.display = 'none';
+                manualGroup.style.display = 'block';
+            }
+        });
+    });
+    
+    // Initialize visibility
+    const selectedType = formDiv.querySelector('.ip-type-radio:checked');
+    if (selectedType) {
+        selectedType.dispatchEvent(new Event('change'));
+    }
+}
+
+function setupRemoveButton(formDiv) {
+    const removeButton = formDiv.querySelector('.remove-additional-ip');
+    removeButton.addEventListener('click', function() {
+        const deleteCheckbox = formDiv.querySelector('input[name$="-DELETE"]');
+        
+        if (deleteCheckbox) {
+            // Existing form: mark for deletion
+            deleteCheckbox.checked = true;
+            formDiv.style.display = 'none';
+        } else {
+            // New form: remove from DOM
+            formDiv.remove();
+            
+            // Update total forms count
+            const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+            totalFormsInput.value = parseInt(totalFormsInput.value) - 1;
+            
+            // Re-index remaining forms
+            reindexForms();
+        }
+    });
+}
+
+function reindexForms() {
+    const formsContainer = document.getElementById('additional-ip-forms');
+    const forms = formsContainer.querySelectorAll('.additional-ip-form:not([style*="display: none"])');
+    
+    forms.forEach((formDiv, index) => {
+        formDiv.setAttribute('data-form-index', index);
+        
+        // Update field names and IDs
+        formDiv.querySelectorAll('input, select, textarea').forEach(field => {
+            if (field.name) {
+                field.name = field.name.replace(/asset_ip_addresses-\d+-/, `asset_ip_addresses-${index}-`);
+            }
+            if (field.id) {
+                field.id = field.id.replace(/id_asset_ip_addresses-\d+-/, `id_asset_ip_addresses-${index}-`);
+            }
+        });
+        
+        // Update label for attributes
+        formDiv.querySelectorAll('label').forEach(label => {
+            if (label.htmlFor) {
+                label.htmlFor = label.htmlFor.replace(/id_asset_ip_addresses-\d+-/, `id_asset_ip_addresses-${index}-`);
+            }
+        });
+    });
+});
+
+// Team Cascading (global function for inline handler)
+function handleParentTeamChange(parentId) {
+    const subTeamSelect = document.getElementById('id_sub_team');
+    const hiddenTeamInput = document.getElementById('id_team');
+    const branchId = document.getElementById('id_branch').value;
+    
+    if (!parentId) {
+        subTeamSelect.style.display = 'none';
+        subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+        hiddenTeamInput.value = '';
+        return;
+    }
+    
+    hiddenTeamInput.value = parentId;
+    
+    // Fetch sub-teams filtered by parent and branch
+    if (branchId) {
+        fetch(`/assets/api/get-sub-teams-by-parent-and-branch/?parent=${parentId}&branch=${branchId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.sub_teams && data.sub_teams.length > 0) {
+                    subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+                    data.sub_teams.forEach(subTeam => {
+                        const option = document.createElement('option');
+                        option.value = subTeam.id;
+                        option.textContent = subTeam.name;
+                        subTeamSelect.appendChild(option);
+                    });
+                    subTeamSelect.style.display = 'block';
+                } else {
+                    subTeamSelect.style.display = 'none';
+                    subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching sub-teams:', error);
+                subTeamSelect.style.display = 'none';
+            });
+    } else {
+        // Use old endpoint if branch is not available
+        fetch(`/assets/api/get-sub-teams/?parent_id=${parentId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.has_sub_teams) {
+                    subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+                    data.sub_teams.forEach(subTeam => {
+                        const option = document.createElement('option');
+                        option.value = subTeam.id;
+                        option.textContent = subTeam.name;
+                        subTeamSelect.appendChild(option);
+                    });
+                    subTeamSelect.style.display = 'block';
+                } else {
+                    subTeamSelect.style.display = 'none';
+                    subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching sub-teams:', error);
+                subTeamSelect.style.display = 'none';
+            });
+    }
+}
+
+// Branch Change Handler - clears team selections and reloads parent teams
+function handleBranchChange(branchId) {
+    const parentTeamSelect = document.getElementById('id_parent_team');
+    const subTeamSelect = document.getElementById('id_sub_team');
+    const hiddenTeamInput = document.getElementById('id_team');
+    
+    // Clear team selections
+    parentTeamSelect.value = '';
+    subTeamSelect.value = '';
+    subTeamSelect.style.display = 'none';
+    hiddenTeamInput.value = '';
+    
+    if (branchId) {
+        // Reload parent team dropdown via AJAX
+        fetch(`/assets/api/get-parent-teams-by-branch/?branch=${branchId}`)
+            .then(response => response.json())
+            .then(data => {
+                parentTeamSelect.innerHTML = '<option value="">Select Team</option>';
+                if (data.teams && data.teams.length > 0) {
+                    data.teams.forEach(team => {
+                        const option = document.createElement('option');
+                        option.value = team.id;
+                        option.textContent = team.name;
+                        parentTeamSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching teams by branch:', error);
+                parentTeamSelect.innerHTML = '<option value="">Select Team</option>';
+            });
+    } else {
+        // No branch selected, clear parent team options
+        parentTeamSelect.innerHTML = '<option value="">Select Team</option>';
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Team cascading - initialize on page load
+    const parentTeamSelect = document.getElementById('id_parent_team');
+    const subTeamSelect = document.getElementById('id_sub_team');
+    
+    // Store the initial sub-team value (if editing an asset with a sub-team)
+    const initialSubTeamValue = subTeamSelect ? subTeamSelect.value : null;
+    const branchSelect = document.getElementById('id_branch');
+    const branchId = branchSelect ? branchSelect.value : null;
+    
+    if (parentTeamSelect && parentTeamSelect.value && branchId) {
+        // Fetch sub-teams filtered by parent and branch, then restore the selected sub-team
+        fetch(`/assets/api/get-sub-teams-by-parent-and-branch/?parent=${parentTeamSelect.value}&branch=${branchId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.sub_teams && data.sub_teams.length > 0) {
+                    subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+                    data.sub_teams.forEach(subTeam => {
+                        const option = document.createElement('option');
+                        option.value = subTeam.id;
+                        option.textContent = subTeam.name;
+                        // Restore the selected sub-team if it matches
+                        if (initialSubTeamValue && subTeam.id == initialSubTeamValue) {
+                            option.selected = true;
+                        }
+                        subTeamSelect.appendChild(option);
+                    });
+                    subTeamSelect.style.display = 'block';
+                } else {
+                    subTeamSelect.style.display = 'none';
+                    subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching sub-teams:', error);
+                subTeamSelect.style.display = 'none';
+            });
+    } else if (parentTeamSelect && parentTeamSelect.value) {
+        // Fallback to old endpoint if branch is not available
+        fetch(`/assets/api/get-sub-teams/?parent_id=${parentTeamSelect.value}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.has_sub_teams) {
+                    subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+                    data.sub_teams.forEach(subTeam => {
+                        const option = document.createElement('option');
+                        option.value = subTeam.id;
+                        option.textContent = subTeam.name;
+                        // Restore the selected sub-team if it matches
+                        if (initialSubTeamValue && subTeam.id == initialSubTeamValue) {
+                            option.selected = true;
+                        }
+                        subTeamSelect.appendChild(option);
+                    });
+                    subTeamSelect.style.display = 'block';
+                } else {
+                    subTeamSelect.style.display = 'none';
+                    subTeamSelect.innerHTML = '<option value="">Select Sub-Team</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching sub-teams:', error);
+                subTeamSelect.style.display = 'none';
+            });
+    }
+    
+    if (subTeamSelect) {
+        subTeamSelect.addEventListener('change', function() {
+            const hiddenTeamInput = document.getElementById('id_team');
+            const parentTeamSelect = document.getElementById('id_parent_team');
+            if (this.value) {
+                hiddenTeamInput.value = this.value;
+            } else {
+                hiddenTeamInput.value = parentTeamSelect.value;
+            }
+        });
+    }
+    
+    // ===== Additional IP Forms Management =====
+    
+    // Function to setup IP type toggle for an additional IP form
+    function setupAdditionalIPTypeToggle(formDiv) {
+        const ipTypeRadios = formDiv.querySelectorAll('.ip-type-radio');
+        const managedGroup = formDiv.querySelector('.additional-managed-ip-group');
+        const manualGroup = formDiv.querySelector('.additional-manual-ip-group');
+        
+        ipTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'managed') {
+                    managedGroup.style.display = 'block';
+                    manualGroup.style.display = 'none';
+                } else {
+                    managedGroup.style.display = 'none';
+                    manualGroup.style.display = 'block';
+                }
+            });
+        });
+        
+        // Initialize visibility based on current selection
+        const selectedType = formDiv.querySelector('.ip-type-radio:checked');
+        if (selectedType) {
+            if (selectedType.value === 'managed') {
+                managedGroup.style.display = 'block';
+                manualGroup.style.display = 'none';
+            } else {
+                managedGroup.style.display = 'none';
+                manualGroup.style.display = 'block';
+            }
+        }
+    }
+    
+    // Setup toggles for existing additional IP forms
+    document.querySelectorAll('.additional-ip-form').forEach(setupAdditionalIPTypeToggle);
+    
+    // Add additional IP button functionality
+    const addButton = document.getElementById('add-additional-ip');
+    const formsContainer = document.getElementById('additional-ip-forms');
+    const emptyFormTemplate = document.getElementById('empty-additional-ip-form');
+    const totalFormsInput = document.querySelector('input[name="asset_ip_addresses-TOTAL_FORMS"]');
+    
+    if (addButton && formsContainer && emptyFormTemplate && totalFormsInput) {
+        addButton.addEventListener('click', function() {
+            const formIndex = parseInt(totalFormsInput.value);
+            
+            // Clone empty form template
+            const newFormHtml = emptyFormTemplate.innerHTML.replace(/__prefix__/g, formIndex);
+            
+            // Create new form div
+            const newFormDiv = document.createElement('div');
+            newFormDiv.innerHTML = newFormHtml;
+            
+            // Get the actual form element from the created div
+            const actualFormDiv = newFormDiv.querySelector('.additional-ip-form');
+            actualFormDiv.setAttribute('data-form-index', formIndex);
+            
+            // Append to container
+            formsContainer.appendChild(actualFormDiv);
+            
+            // Update total forms count
+            totalFormsInput.value = formIndex + 1;
+            
+            // Setup IP type toggle for new form
+            setupAdditionalIPTypeToggle(actualFormDiv);
+            
+            // Setup remove button for new form
+            setupRemoveButton(actualFormDiv);
+        });
+    }
+    
+    // Remove button functionality
+    function setupRemoveButton(formDiv) {
+        const removeButton = formDiv.querySelector('.remove-additional-ip');
+        if (removeButton) {
+            removeButton.addEventListener('click', function() {
+                const deleteCheckbox = formDiv.querySelector('input[name$="-DELETE"]');
+                
+                if (deleteCheckbox) {
+                    // Existing form: mark for deletion and hide
+                    deleteCheckbox.checked = true;
+                    formDiv.style.display = 'none';
+                } else {
+                    // New form: remove from DOM
+                    formDiv.remove();
+                    
+                    // Update total forms count
+                    totalFormsInput.value = parseInt(totalFormsInput.value) - 1;
+                    
+                    // Re-index remaining forms
+                    reindexForms();
+                }
+            });
+        }
+    }
+    
+    // Setup remove buttons for existing additional IP forms
+    document.querySelectorAll('.additional-ip-form').forEach(formDiv => {
+        setupRemoveButton(formDiv);
+    });
+    
+    // Re-index forms after removal to maintain sequential indexes
+    function reindexForms() {
+        const visibleForms = Array.from(formsContainer.querySelectorAll('.additional-ip-form'))
+            .filter(formDiv => formDiv.style.display !== 'none');
+        
+        visibleForms.forEach((formDiv, index) => {
+            formDiv.setAttribute('data-form-index', index);
+            
+            // Update field names and IDs
+            formDiv.querySelectorAll('input, select, textarea').forEach(field => {
+                if (field.name) {
+                    field.name = field.name.replace(/asset_ip_addresses-\d+-/, `asset_ip_addresses-${index}-`);
+                }
+                if (field.id) {
+                    field.id = field.id.replace(/id_asset_ip_addresses-\d+-/, `id_asset_ip_addresses-${index}-`);
+                }
+            });
+            
+            // Update label for attributes
+            formDiv.querySelectorAll('label').forEach(label => {
+                if (label.htmlFor) {
+                    label.htmlFor = label.htmlFor.replace(/id_asset_ip_addresses-\d+-/, `id_asset_ip_addresses-${index}-`);
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
+
+

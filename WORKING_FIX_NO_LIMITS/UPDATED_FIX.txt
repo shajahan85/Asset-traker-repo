@@ -1,0 +1,32 @@
+========================================
+UPDATED FIX - IP Filtering Removed
+========================================
+Date: 2026-09-22 22:15
+
+WHAT CHANGED:
+-------------
+Removed IP address range filtering completely.
+
+Before: Only showed IPs from 192.168.10/11/50/70 ranges
+Now: Shows ALL free IP addresses
+
+This fixes:
+✅ IP not showing for Ameen Mohammed
+✅ IP not showing for other users
+✅ All IPs now appear in dropdown
+
+DEPLOY NOW:
+-----------
+
+cd /var/www/asset_tracker/
+cp /path/to/WORKING_FIX_NO_LIMITS/asset_forms.py /var/www/asset_tracker/assets/forms/
+sudo systemctl restart asset_tracker
+
+TEST:
+-----
+- Edit Ameen Mohammed's assets - IP should show
+- Edit Sankar's asset - should work
+- Edit Kharunnisa's assets - should work
+- All users should now see their IPs
+
+========================================

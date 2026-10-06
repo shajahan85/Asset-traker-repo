@@ -1,0 +1,124 @@
+═══════════════════════════════════════════════════════════════════════════════
+                   FILES MODIFIED IN AUGUST-SEPTEMBER 2026
+                  (These are the files to deploy to Linux)
+═══════════════════════════════════════════════════════════════════════════════
+
+Based on file modification dates, these are the files that changed:
+
+═══════════════════════════════════════════════════════════════════════════════
+📄 PYTHON FILES (5 files)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. assets/views.py
+   Modified: 2026-09-04 11:36:33
+   Purpose: Main views
+
+2. assets/views_server_controller.py
+   Modified: 2026-09-09 11:52:11
+   Purpose: Server Controllers feature (NEW)
+
+3. assets/forms/asset_forms.py
+   Modified: 2026-09-15 21:03:56  ⭐ RECENT!
+   Purpose: Bug fix for page freeze (limit=30)
+
+4. assets/services/asset_service.py
+   Modified: 2026-09-04 11:35:34
+   Purpose: Asset service updates
+
+5. assets/services/notification_service.py
+   Modified: 2026-09-03 14:59:30
+   Purpose: Notification updates
+
+═══════════════════════════════════════════════════════════════════════════════
+📄 TEMPLATE FILES (7 files)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. assets/templates/assets/base.html
+   Modified: 2026-09-08 18:01:28
+   Purpose: Base template (menu updates)
+
+2. assets/templates/assets/freed_systems.html
+   Modified: 2026-09-08 18:01:57
+   Purpose: Freed systems page
+
+3. assets/templates/assets/free_ips.html
+   Modified: 2026-08-31 17:40:07
+   Purpose: Free IPs page
+
+4. assets/templates/assets/asset_form.html
+   Modified: 2026-09-03 14:58:07
+   Purpose: Asset form (email toggle)
+
+5. assets/templates/assets/server_controller_form.html
+   Modified: 2026-09-08 18:15:31
+   Purpose: Server Controllers form (NEW)
+
+6. assets/templates/assets/server_controller_list.html
+   Modified: 2026-09-09 15:47:22
+   Purpose: Server Controllers list (NEW)
+
+7. assets/templates/assets/server_controller_reassign.html
+   Modified: 2026-09-08 17:59:48
+   Purpose: Server Controllers reassign (NEW)
+
+═══════════════════════════════════════════════════════════════════════════════
+📄 CSS FILES (1 file)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. assets/static/assets/css/styles.css
+   Modified: 2026-09-16 12:59:37  ⭐ TODAY!
+   Purpose: Table scrolling fix, UI improvements
+
+Note: mobile.css was modified 2026-03-06 (old, no need to deploy)
+
+═══════════════════════════════════════════════════════════════════════════════
+📊 SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+Total files to deploy: 13 files
+  - Python files: 5
+  - Template files: 7
+  - CSS files: 1
+
+Most recent change: styles.css (TODAY - 2026-09-16)
+
+═══════════════════════════════════════════════════════════════════════════════
+🚀 FOR LINUX DEPLOYMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+Copy these 13 files to Linux server at:
+/var/www/asset_tracker/
+
+Exact paths:
+/var/www/asset_tracker/assets/views.py
+/var/www/asset_tracker/assets/views_server_controller.py
+/var/www/asset_tracker/assets/forms/asset_forms.py
+/var/www/asset_tracker/assets/services/asset_service.py
+/var/www/asset_tracker/assets/services/notification_service.py
+/var/www/asset_tracker/assets/templates/assets/base.html
+/var/www/asset_tracker/assets/templates/assets/freed_systems.html
+/var/www/asset_tracker/assets/templates/assets/free_ips.html
+/var/www/asset_tracker/assets/templates/assets/asset_form.html
+/var/www/asset_tracker/assets/templates/assets/server_controller_form.html
+/var/www/asset_tracker/assets/templates/assets/server_controller_list.html
+/var/www/asset_tracker/assets/templates/assets/server_controller_reassign.html
+/var/www/asset_tracker/assets/static/assets/css/styles.css
+
+THEN MUST RUN:
+cd /var/www/asset_tracker
+source venv/bin/activate
+python manage.py collectstatic --clear --noinput
+sudo systemctl restart asset_tracker nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ HOW TO USE THIS LIST
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Copy these 13 files to a folder for Linux team
+2. Share folder with Linux team
+3. They copy to server (overwrite existing files)
+4. They run collectstatic
+5. They restart services
+6. Done!
+
+═══════════════════════════════════════════════════════════════════════════════

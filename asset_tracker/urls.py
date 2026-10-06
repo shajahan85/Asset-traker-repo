@@ -17,6 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
+from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from assets.api_views import TeamViewSet
 
@@ -31,3 +33,7 @@ urlpatterns = [
     path('power-monitoring/', include('power_monitoring.urls')),
     path('api/', include(router.urls)),
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

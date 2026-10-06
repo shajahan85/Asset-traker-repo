@@ -1,0 +1,58 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Branches - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>Branches</h1>
+    {% if user.is_staff %}
+    <a href="{% url 'branch_create' %}" class="btn btn-primary">Add New Branch</a>
+    {% endif %}
+</div>
+
+{% if branches %}
+<div class="table-responsive">
+    <table>
+        <thead>
+            <tr>
+                <th>Branch Name</th>
+                <th>Branch Code</th>
+                <th>Status</th>
+                <th>Total Assets</th>
+                {% if user.is_staff %}
+                <th>Actions</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for branch in branches %}
+            <tr>
+                <td><strong>{{ branch.name }}</strong></td>
+                <td>{{ branch.code }}</td>
+                <td>
+                    {% if branch.is_active %}
+                        <span class="status-badge status-active">Active</span>
+                    {% else %}
+                        <span class="status-badge status-expired">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ branch.assets.count }}</td>
+                {% if user.is_staff %}
+                <td>
+                    <div class="action-buttons">
+                        <a href="{% url 'branch_update' branch.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                        <a href="{% url 'branch_delete' branch.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                    </div>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p>No branches found.</p>
+</div>
+{% endif %}
+{% endblock %}

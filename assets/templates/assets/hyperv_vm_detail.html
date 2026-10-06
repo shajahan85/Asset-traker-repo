@@ -1,0 +1,119 @@
+{% extends "assets/base.html" %}
+
+{% block title %}{{ vm.name }} - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>VM Details: {{ vm.name }}</h1>
+    <div>
+        <a href="{% url 'hyperv_vm_update' vm.pk %}" class="btn btn-warning">Edit</a>
+        <a href="{% url 'hyperv_vm_delete' vm.pk %}" class="btn btn-danger">Delete</a>
+        <a href="{% url 'hyperv_vm_list' %}" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>VM Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th>VM Name:</th>
+                        <td>{{ vm.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>IP Address:</th>
+                        <td>{{ vm.get_display_ip }}</td>
+                    </tr>
+                    <tr>
+                        <th>Power Status:</th>
+                        <td>
+                            {% if vm.power_status == 'on' %}
+                                <span class="badge bg-success">On</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Off</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Status:</th>
+                        <td>
+                            {% if vm.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Created:</th>
+                        <td>{{ vm.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Last Updated:</th>
+                        <td>{{ vm.updated_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        {% if vm.notes %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Notes</h5>
+            </div>
+            <div class="card-body">
+                <p>{{ vm.notes|linebreaks }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Host Machine</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th>Asset Tag:</th>
+                        <td>
+                            <a href="{% url 'asset_list' %}?serial_number={{ vm.host_machine.serial_number }}">
+                                {{ vm.host_machine.asset_tag }}
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>System Type:</th>
+                        <td>{{ vm.host_machine.system_type }}</td>
+                    </tr>
+                    <tr>
+                        <th>IP Address:</th>
+                        <td>{{ vm.get_host_ip }}</td>
+                    </tr>
+                    <tr>
+                        <th>Status:</th>
+                        <td>
+                            <span class="badge bg-{% if vm.host_machine.status == 'active' %}success{% else %}secondary{% endif %}">
+                                {{ vm.host_machine.get_status_display }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

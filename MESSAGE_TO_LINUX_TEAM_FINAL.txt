@@ -1,0 +1,87 @@
+Subject: URGENT - Asset Tracker Issues - CSS AND Page Freeze Bug
+
+Hi Linux Team,
+
+There are TWO issues on the production server:
+
+1. CSS is broken (Freed Systems page missing text, no horizontal scrollbar)
+2. Page freeze bug still exists (updating employee code freezes the page)
+
+Issue #1 means the CSS in staticfiles is OLD.
+Issue #2 means the bug fix file (asset_forms.py) was NOT deployed.
+
+Both fixes are in the DEPLOY_TO_LINUX package you received.
+
+I've attached a script that will fix this: FINAL_FIX_FOR_LINUX_TEAM.sh
+
+Please run it:
+
+  cd /tmp/DEPLOY_TO_LINUX
+  bash FINAL_FIX_FOR_LINUX_TEAM.sh
+
+This script will:
+1. Verify the source CSS has new content
+2. Delete old staticfiles completely
+3. Run collectstatic fresh
+4. Verify the collected CSS is correct
+5. Restart services
+
+It has built-in checks and will tell you if something is wrong.
+
+After running, send me the complete output.
+
+The script will show ✅ or ❌ for each step so you can see what's working.
+
+This is the 5th deployment attempt. Please run the script EXACTLY as shown
+and send me the full output so we can verify it worked.
+
+Thank you!
+
+
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL: You must deploy BOTH the Python files AND the CSS!
+═══════════════════════════════════════════════════════════════════════════════
+
+Step 1: Copy ALL files from DEPLOY_TO_LINUX to server
+──────────────────────────────────────────────────────
+
+cd /tmp/DEPLOY_TO_LINUX
+
+# Copy Python files
+sudo cp assets/views.py /var/www/asset_tracker/assets/
+sudo cp assets/views_server_controller.py /var/www/asset_tracker/assets/
+sudo cp assets/forms/asset_forms.py /var/www/asset_tracker/assets/forms/
+sudo cp assets/services/asset_service.py /var/www/asset_tracker/assets/services/
+sudo cp assets/services/notification_service.py /var/www/asset_tracker/assets/services/
+
+# Copy Templates
+sudo cp -r assets/templates/assets/* /var/www/asset_tracker/assets/templates/assets/
+
+# Copy CSS
+sudo cp assets/static/assets/css/styles.css /var/www/asset_tracker/assets/static/assets/css/
+
+Step 2: Run the fix script
+──────────────────────────
+
+bash FINAL_FIX_FOR_LINUX_TEAM.sh
+
+This will:
+- Verify files are correct
+- Run collectstatic
+- Restart services
+- Show you clear ✅ or ❌ for each step
+
+Step 3: Verify the bug fix was deployed
+───────────────────────────────────────
+
+After running the script, run this command:
+
+grep "limit=30" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+MUST show: def get_filtered_free_ips(include_current_ip_id=None, limit=30):
+
+If it shows NOTHING, the file was NOT copied!
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPORTANT: Copy files FIRST, then run the script!
+═══════════════════════════════════════════════════════════════════════════════

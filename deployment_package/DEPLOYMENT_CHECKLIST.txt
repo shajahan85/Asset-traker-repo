@@ -1,0 +1,236 @@
+═══════════════════════════════════════════════════════════════════════════════
+                        DEPLOYMENT CHECKLIST FOR LINUX TEAM
+═══════════════════════════════════════════════════════════════════════════════
+
+Date: September 9, 2026
+Package: Asset Tracker Updates v2.1
+Changes: Server Controllers + IP Filter + Email Toggle + UI Improvements
+
+═══════════════════════════════════════════════════════════════════════════════
+
+FILES TO UPLOAD (11 files total):
+═══════════════════════════════════════════════════════════════════════════════
+
+PYTHON FILES (5):
+  [ ] assets/views.py
+  [ ] assets/views_server_controller.py
+  [ ] assets/forms/asset_forms.py
+  [ ] assets/services/asset_service.py
+  [ ] assets/services/notification_service.py
+
+TEMPLATE FILES (6):
+  [ ] assets/templates/assets/asset_form.html
+  [ ] assets/templates/assets/freed_systems.html
+  [ ] assets/templates/assets/free_ips.html
+  [ ] assets/templates/assets/server_controller_list.html
+  [ ] assets/templates/assets/server_controller_form.html
+  [ ] assets/templates/assets/server_controller_reassign.html
+
+═══════════════════════════════════════════════════════════════════════════════
+
+PRE-DEPLOYMENT:
+═══════════════════════════════════════════════════════════════════════════════
+
+  [ ] 1. Notify team of deployment window
+  
+  [ ] 2. Verify backup strategy in place
+  
+  [ ] 3. Upload deployment_package folder to /tmp/
+      Command: scp -r deployment_package username@server:/tmp/
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DEPLOYMENT STEPS:
+═══════════════════════════════════════════════════════════════════════════════
+
+  [ ] 1. SSH into server
+      ssh username@server-ip
+
+  [ ] 2. Create backup directory
+      sudo mkdir -p /var/www/asset_tracker/backups/$(date +%Y%m%d_%H%M%S)
+
+  [ ] 3. Backup current files
+      cd /var/www/asset_tracker
+      sudo cp assets/views.py backups/$(date +%Y%m%d_%H%M%S)/
+      sudo cp assets/views_server_controller.py backups/$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
+      sudo cp assets/forms/asset_forms.py backups/$(date +%Y%m%d_%H%M%S)/
+      sudo cp assets/services/*.py backups/$(date +%Y%m%d_%H%M%S)/
+      sudo cp -r assets/templates/assets/*.html backups/$(date +%Y%m%d_%H%M%S)/
+
+  [ ] 4. Copy new Python files
+      cd /tmp/deployment_package
+      sudo cp assets/views.py /var/www/asset_tracker/assets/
+      sudo cp assets/views_server_controller.py /var/www/asset_tracker/assets/
+      sudo cp assets/forms/asset_forms.py /var/www/asset_tracker/assets/forms/
+      sudo cp assets/services/asset_service.py /var/www/asset_tracker/assets/services/
+      sudo cp assets/services/notification_service.py /var/www/asset_tracker/assets/services/
+
+  [ ] 5. Copy new template files
+      sudo cp assets/templates/assets/asset_form.html /var/www/asset_tracker/assets/templates/assets/
+      sudo cp assets/templates/assets/freed_systems.html /var/www/asset_tracker/assets/templates/assets/
+      sudo cp assets/templates/assets/free_ips.html /var/www/asset_tracker/assets/templates/assets/
+      sudo cp assets/templates/assets/server_controller_list.html /var/www/asset_tracker/assets/templates/assets/
+      sudo cp assets/templates/assets/server_controller_form.html /var/www/asset_tracker/assets/templates/assets/
+      sudo cp assets/templates/assets/server_controller_reassign.html /var/www/asset_tracker/assets/templates/assets/
+
+  [ ] 6. Set correct permissions
+      sudo chown -R www-data:www-data /var/www/asset_tracker/assets
+      sudo chmod -R 755 /var/www/asset_tracker/assets
+
+  [ ] 7. Activate virtual environment
+      cd /var/www/asset_tracker
+      source venv/bin/activate
+
+  [ ] 8. Collect static files
+      python manage.py collectstatic --noinput
+
+  [ ] 9. Verify no migrations needed
+      python manage.py showmigrations
+      (Should show no unapplied migrations)
+
+  [ ] 10. Restart application
+      sudo systemctl restart asset_tracker
+
+═══════════════════════════════════════════════════════════════════════════════
+
+POST-DEPLOYMENT VERIFICATION:
+═══════════════════════════════════════════════════════════════════════════════
+
+  [ ] 1. Check service status
+      sudo systemctl status asset_tracker
+      (Should show: active (running))
+
+  [ ] 2. Check logs for errors
+      sudo journalctl -u asset_tracker -n 50
+      (Should show no errors)
+
+  [ ] 3. Test homepage loads
+      curl http://localhost:8000/assets/
+      (Should return 200 or 302)
+
+  [ ] 4. Test Server Controllers page
+      curl http://localhost:8000/assets/server-controllers/
+      (Should return 200 or 302)
+
+  [ ] 5. Check in browser - Login page
+      URL: http://your-server/login/
+      Status: Should load
+
+  [ ] 6. Check in browser - Main page
+      URL: http://your-server/assets/
+      Status: Should load after login
+
+  [ ] 7. Check in browser - Server Controllers
+      URL: http://your-server/assets/server-controllers/
+      Status: Should load with new features
+
+  [ ] 8. Verify new features visible:
+      [ ] Server Controllers menu item (staff only)
+      [ ] IP filter input field on SC page
+      [ ] Email checkbox on asset edit form
+      [ ] IP series buttons on Free IP page
+      [ ] SC badge on freed systems
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+═══════════════════════════════════════════════════════════════════════════════
+
+IF SERVICE WON'T START:
+  → Check Python syntax:
+    python manage.py check
+  
+  → View detailed errors:
+    sudo journalctl -u asset_tracker -n 200
+
+IF PAGES SHOW 404:
+  → Verify files copied:
+    ls -la /var/www/asset_tracker/assets/views_server_controller.py
+  
+  → Check URLs:
+    grep "server-controllers" /var/www/asset_tracker/assets/urls.py
+
+IF TEMPLATES NOT FOUND:
+  → Check template directory:
+    ls -la /var/www/asset_tracker/assets/templates/assets/
+  
+  → Verify permissions:
+    ls -la /var/www/asset_tracker/assets/templates/
+
+IF STATIC FILES NOT LOADING:
+  → Recollect static files:
+    python manage.py collectstatic --clear --noinput
+  
+  → Restart Nginx:
+    sudo systemctl restart nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ROLLBACK (IF NEEDED):
+═══════════════════════════════════════════════════════════════════════════════
+
+  [ ] 1. Stop application
+      sudo systemctl stop asset_tracker
+
+  [ ] 2. Restore backup (replace YYYYMMDD_HHMMSS with actual timestamp)
+      cd /var/www/asset_tracker/backups/YYYYMMDD_HHMMSS
+      sudo cp * /var/www/asset_tracker/assets/
+
+  [ ] 3. Restart application
+      sudo systemctl start asset_tracker
+
+  [ ] 4. Verify rollback
+      sudo systemctl status asset_tracker
+
+═══════════════════════════════════════════════════════════════════════════════
+
+IMPORTANT NOTES:
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ DO:
+  • Backup before making changes
+  • Set correct permissions (www-data:www-data)
+  • Run collectstatic
+  • Restart application service
+  • Check logs after deployment
+
+❌ DON'T:
+  • Skip backup step
+  • Forget to set permissions
+  • Skip collectstatic
+  • Forget to restart service
+
+📝 NOTES:
+  • No database migrations required
+  • No settings.py changes needed
+  • Backward compatible - won't break existing features
+  • Estimated downtime: 2-3 minutes
+
+═══════════════════════════════════════════════════════════════════════════════
+
+COMPLETION:
+═══════════════════════════════════════════════════════════════════════════════
+
+Deployment completed by: ___________________________
+
+Date/Time: ___________________________
+
+Issues encountered: ___________________________
+
+___________________________
+
+___________________________
+
+Resolution: ___________________________
+
+___________________________
+
+___________________________
+
+Sign-off: ___________________________
+
+═══════════════════════════════════════════════════════════════════════════════
+
+                            END OF CHECKLIST
+
+═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,185 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    FOR USER - AFTER LINUX TEAM DEPLOYS
+═══════════════════════════════════════════════════════════════════════════════
+
+This file is for YOU (the user) to follow after Linux team confirms deployment.
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 1: WAIT FOR CONFIRMATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Wait for Linux team to:
+1. Run all deployment commands
+2. Send you verification output
+3. Confirm ALL checks passed ✅
+
+DO NOT proceed until you get confirmation!
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 2: CLEAR YOUR BROWSER CACHE (CRITICAL!)
+═══════════════════════════════════════════════════════════════════════════════
+
+This is the MOST IMPORTANT step!
+
+Windows/Linux:
+1. Press Ctrl + Shift + Delete
+2. Select "All time" (not just "Last hour")
+3. Check "Cached images and files"
+4. Check "Cookies and other site data" (optional but recommended)
+5. Click "Clear data"
+
+Mac:
+1. Press Cmd + Shift + Delete
+2. Follow same steps
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 3: CLOSE BROWSER COMPLETELY
+═══════════════════════════════════════════════════════════════════════════════
+
+Don't just close the tab - close the ENTIRE browser!
+
+Windows: Close all browser windows
+Mac: Cmd + Q to quit browser completely
+
+Wait 10 seconds.
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 4: TEST IN INCOGNITO/PRIVATE WINDOW (RECOMMENDED)
+═══════════════════════════════════════════════════════════════════════════════
+
+Open browser in private mode:
+- Chrome: Ctrl + Shift + N
+- Firefox: Ctrl + Shift + P
+- Edge: Ctrl + Shift + N
+
+This ensures no cached content is used.
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 5: TEST THE FIXES
+═══════════════════════════════════════════════════════════════════════════════
+
+Go to: https://assettracker.benzyinfotech.com
+
+Test 1: Login
+─────────────
+Login and verify it goes to /assets/ page (not /dashboard/)
+Result: [ ] PASS / [ ] FAIL
+
+Test 2: Page Freeze Bug (CRITICAL!)
+────────────────────────────────────
+1. Go to Active Assets
+2. Find asset BIDC1326 (Sankar)
+3. Click "Edit"
+4. Try to update the employee code field
+
+Does it load FAST (<1 second)?
+Result: [ ] PASS / [ ] FAIL
+
+If it STILL freezes:
+❌ Bug fix was NOT deployed properly
+→ Tell Linux team to check verification output
+
+Test 3: CSS Layout - Freed Systems Page
+────────────────────────────────────────
+1. Go to "Freed Systems" page
+2. Check:
+   - Is "Freed Systems" title visible at top? [ ] YES / [ ] NO
+   - Is there a horizontal scrollbar at TOP of table? [ ] YES / [ ] NO
+   - Can you see all columns without cutting off? [ ] YES / [ ] NO
+
+Result: [ ] PASS / [ ] FAIL
+
+Test 4: CSS Layout - Active Assets Page
+───────────────────────────────────────
+1. Go to "Active Assets" page
+2. Check:
+   - Is logout button in TOP RIGHT corner? [ ] YES / [ ] NO
+   - Is there a vertical scrollbar on the table? [ ] YES / [ ] NO
+   - Does table show ~10-15 rows (not all rows)? [ ] YES / [ ] NO
+
+Result: [ ] PASS / [ ] FAIL
+
+Test 5: Table Scrolling
+───────────────────────
+1. On Active Assets page
+2. Scroll down in the table
+3. Does the header row STAY FIXED at top? [ ] YES / [ ] NO
+
+Result: [ ] PASS / [ ] FAIL
+
+Test 6: Overall Appearance
+──────────────────────────
+Does the site look EXACTLY like your local development site?
+Result: [ ] YES / [ ] NO
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 6: TRY DIFFERENT BROWSER (if issues persist)
+═══════════════════════════════════════════════════════════════════════════════
+
+If you still see issues after clearing cache:
+
+Try different browser:
+- If using Chrome → Try Firefox
+- If using Firefox → Try Edge
+- If using Edge → Try Chrome
+
+This will confirm if it's a browser-specific cache issue.
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 7: TRY DIFFERENT DEVICE (if issues persist)
+═══════════════════════════════════════════════════════════════════════════════
+
+Try from:
+- Different computer
+- Mobile phone
+- Colleague's computer
+
+If it works on other devices but not yours:
+→ Your device has stubborn cache
+→ Clear cache again, restart device
+
+═══════════════════════════════════════════════════════════════════════════════
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════════════
+
+Problem: Page freeze bug still exists
+Solution: Bug fix file was not deployed
+Action: Ask Linux team to verify:
+  grep "limit=30" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+Problem: CSS still broken
+Solution: CSS not collected or cached
+Action: Ask Linux team to verify:
+  grep "overflow-y.*auto" /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+Problem: Works in Incognito but not normal browser
+Solution: Your browser cache is stubborn
+Action: 
+  - Clear cache again
+  - Clear cookies too
+  - Restart browser
+  - Restart computer
+  - Use Incognito as workaround
+
+Problem: Still broken on all devices
+Solution: Server-side issue
+Action: Ask Linux team to re-run verification commands
+
+═══════════════════════════════════════════════════════════════════════════════
+SUCCESS CRITERIA
+═══════════════════════════════════════════════════════════════════════════════
+
+Deployment is successful when:
+
+✅ Login redirects to /assets/ page
+✅ Edit BIDC1326 (Sankar) loads FAST (no freeze)
+✅ Freed Systems page shows title
+✅ Horizontal scrollbar visible at TOP of tables
+✅ Table shows ~10-15 rows (not all)
+✅ Header stays fixed when scrolling
+✅ Logout button in TOP RIGHT corner
+✅ Site looks EXACTLY like local development
+
+If ALL above are TRUE: ✅ DEPLOYMENT SUCCESSFUL!
+
+═══════════════════════════════════════════════════════════════════════════════

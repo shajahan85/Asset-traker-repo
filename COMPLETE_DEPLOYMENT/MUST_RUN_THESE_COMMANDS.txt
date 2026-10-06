@@ -1,0 +1,164 @@
+═══════════════════════════════════════════════════════════════════════════════
+    CRITICAL: RUN THESE COMMANDS ON LINUX SERVER - DO NOT SKIP ANY!
+═══════════════════════════════════════════════════════════════════════════════
+
+⚠️  WARNING: If you skip ANY command, changes will NOT appear!
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 1: STOP SERVICES
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl stop asset_tracker
+sudo systemctl stop nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 2: BACKUP CURRENT FILES (SAFETY)
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo cp -r /var/www/asset_tracker/assets /var/www/asset_tracker/assets.backup.$(date +%Y%m%d)
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 3: COPY ALL NEW FILES (ASSUMING COMPLETE_DEPLOYMENT IS IN /tmp/)
+═══════════════════════════════════════════════════════════════════════════════
+
+# Copy Python files
+sudo cp /tmp/COMPLETE_DEPLOYMENT/assets/views.py /var/www/asset_tracker/assets/
+sudo cp /tmp/COMPLETE_DEPLOYMENT/assets/views_server_controller.py /var/www/asset_tracker/assets/
+sudo cp /tmp/COMPLETE_DEPLOYMENT/assets/forms/asset_forms.py /var/www/asset_tracker/assets/forms/
+sudo cp /tmp/COMPLETE_DEPLOYMENT/assets/services/asset_service.py /var/www/asset_tracker/assets/services/
+sudo cp /tmp/COMPLETE_DEPLOYMENT/assets/services/notification_service.py /var/www/asset_tracker/assets/services/
+
+# Copy Templates
+sudo cp -r /tmp/COMPLETE_DEPLOYMENT/assets/templates/assets/* /var/www/asset_tracker/assets/templates/assets/
+
+# Copy CSS files (CRITICAL - THIS IS WHY CHANGES DON'T SHOW!)
+sudo mkdir -p /var/www/asset_tracker/assets/static/assets/css
+sudo cp /tmp/COMPLETE_DEPLOYMENT/assets/static/assets/css/styles.css /var/www/asset_tracker/assets/static/assets/css/
+sudo cp /tmp/COMPLETE_DEPLOYMENT/assets/static/assets/css/mobile.css /var/www/asset_tracker/assets/static/assets/css/
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 4: FIX PERMISSIONS (CRITICAL!)
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo chown -R www-data:www-data /var/www/asset_tracker/assets
+sudo chmod -R 755 /var/www/asset_tracker/assets
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 5: COLLECT STATIC FILES (MOST IMPORTANT - DON'T SKIP!)
+═══════════════════════════════════════════════════════════════════════════════
+
+cd /var/www/asset_tracker
+source venv/bin/activate
+python manage.py collectstatic --clear --noinput
+
+# This command MUST complete successfully!
+# If you see errors, STOP and report them!
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 6: START SERVICES
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl start asset_tracker
+sudo systemctl start nginx
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 7: VERIFY SERVICES ARE RUNNING
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo systemctl status asset_tracker
+sudo systemctl status nginx
+
+# Both should show "active (running)"
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 8: CHECK FOR ERRORS IN LOGS
+═══════════════════════════════════════════════════════════════════════════════
+
+sudo journalctl -u asset_tracker -n 50 --no-pager
+
+# If you see errors, STOP and report them!
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 9: VERIFY FILES ARE DEPLOYED CORRECTLY
+═══════════════════════════════════════════════════════════════════════════════
+
+# Check bug fix is deployed
+grep "limit=30" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+# Should show: def get_filtered_free_ips(include_current_ip_id=None, limit=30):
+
+# Check CSS is collected
+ls -la /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+# Should show file with recent date/time
+
+# Check CSS has the fix
+grep "max-height.*70vh" /var/www/asset_tracker/staticfiles/assets/css/styles.css
+
+# Should show: max-height: 70vh;
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 10: CLEAR BROWSER CACHE (CRITICAL!)
+═══════════════════════════════════════════════════════════════════════════════
+
+Tell the user to:
+1. Press Ctrl + Shift + Delete
+2. Select "All time"
+3. Check "Cached images and files"
+4. Click "Clear data"
+5. Close browser completely
+6. Reopen browser
+7. Try the site again
+
+OR use Incognito/Private window to test
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ VERIFICATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+After completing ALL steps above, verify:
+
+[ ] Login redirects to /assets/ page (not /dashboard/)
+[ ] Horizontal scrollbar appears at TOP of table (not bottom)
+[ ] Table height is limited (not showing all rows)
+[ ] Edit asset loads quickly (no 5-10 second freeze)
+[ ] Edit BIDC1326 (Sankar) - no freezing
+[ ] Edit Kharunnisa's asset - no freezing
+[ ] Server Controllers menu visible (for staff users)
+[ ] No errors in browser console (F12)
+
+═══════════════════════════════════════════════════════════════════════════════
+🚨 IF CHANGES STILL NOT VISIBLE
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Run this command:
+   bash /tmp/COMPLETE_DEPLOYMENT/verify_deployment.sh
+
+2. Send output to developer
+
+3. Check these specific files:
+   ls -la /var/www/asset_tracker/staticfiles/assets/css/
+   
+4. Verify CSS content:
+   cat /var/www/asset_tracker/staticfiles/assets/css/styles.css | grep "70vh"
+
+═══════════════════════════════════════════════════════════════════════════════
+📞 REPORT BACK
+═══════════════════════════════════════════════════════════════════════════════
+
+After running these commands, report:
+
+1. Did all commands complete successfully? YES / NO
+2. Are both services running? YES / NO
+3. Any errors in logs? YES / NO
+4. Is horizontal scrollbar at TOP now? YES / NO
+5. Does editing asset load quickly? YES / NO
+
+═══════════════════════════════════════════════════════════════════════════════
+
+⚠️  REMEMBER: The most common mistake is forgetting to run:
+    python manage.py collectstatic --clear --noinput
+
+    Without this command, CSS changes will NEVER appear!
+
+═══════════════════════════════════════════════════════════════════════════════

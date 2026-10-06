@@ -1,0 +1,294 @@
+{% extends "assets/base.html" %}
+{% load asset_filters %}
+
+{% block title %}Asset History - {{ asset.asset_tag }} - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <div>
+        <h1>Asset History: {{ asset.asset_tag }}</h1>
+        <p class="text-muted">{{ asset.system_type }} | Status: {{ asset.get_status_display }}</p>
+    </div>
+    <div>
+        <a href="{% url 'asset_history_export' asset.pk %}{% if active_filters.event_type or active_filters.user or active_filters.date_from or active_filters.date_to %}?event_type={{ active_filters.event_type }}&user={{ active_filters.user }}&date_from={{ active_filters.date_from }}&date_to={{ active_filters.date_to }}{% endif %}" class="btn btn-success">Export History</a>
+        {% if asset.status == 'active' %}
+        <a href="{% url 'asset_update' asset.pk %}" class="btn btn-secondary">Back to Asset</a>
+        {% elif asset.status == 'freed' %}
+        <a href="{% url 'freed_systems' %}" class="btn btn-secondary">Back to Freed Systems</a>
+        {% elif asset.status == 'scrapped' %}
+        <a href="{% url 'scrapped_items' %}" class="btn btn-secondary">Back to Scrapped Items</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filter Form Section -->
+<div class="filter-section">
+    <form method="get" action="{% url 'asset_history' asset.pk %}" class="filter-form">
+        <div class="filter-header">
+            <h3>Filter History</h3>
+            {% if active_filters.event_type or active_filters.user or active_filters.date_from or active_filters.date_to %}
+            <span class="filter-badge">
+                Filters Active
+            </span>
+            {% endif %}
+        </div>
+        
+        <div class="filter-fields">
+            <div class="filter-field">
+                <label for="event_type">Event Type</label>
+                <select name="event_type" id="event_type" class="form-control">
+                    <option value="">All Events</option>
+                    {% for value, label in event_types %}
+                    <option value="{{ value }}" {% if active_filters.event_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-field">
+                <label for="user">User</label>
+                <input type="text" name="user" id="user" value="{{ active_filters.user }}" class="form-control" placeholder="Username">
+            </div>
+            
+            <div class="filter-field">
+                <label for="date_from">Date From</label>
+                <input type="date" name="date_from" id="date_from" value="{{ active_filters.date_from }}" class="form-control">
+            </div>
+            
+            <div class="filter-field">
+                <label for="date_to">Date To</label>
+                <input type="date" name="date_to" id="date_to" value="{{ active_filters.date_to }}" class="form-control">
+            </div>
+        </div>
+        
+        <div class="filter-buttons">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="{% url 'asset_history' asset.pk %}" class="btn btn-secondary">Clear Filters</a>
+        </div>
+    </form>
+</div>
+
+<!-- History Timeline -->
+<div class="history-timeline">
+    {% if history_entries %}
+        {% for entry in history_entries %}
+        <div class="history-entry">
+            <div class="history-header">
+                <span class="event-badge event-{{ entry.event_type }}">
+                    {{ entry.get_event_type_display }}
+                </span>
+                <span class="history-timestamp">{{ entry.timestamp|date:"Y-m-d H:i:s" }}</span>
+                <span class="history-user">by {{ entry.user }}</span>
+            </div>
+            
+            <div class="history-changes">
+                {% if entry.changes %}
+                    <table class="changes-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Previous Value</th>
+                                <th>New Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for field_name, values in entry.changes.items %}
+                            <tr>
+                                <td><strong>{{ field_name|replace_underscore|title }}</strong></td>
+                                <td class="old-value">{{ values.old|default:"Not set" }}</td>
+                                <td class="new-value">{{ values.new|default:"Not set" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted">No field changes recorded</p>
+                {% endif %}
+                
+                {% if entry.notes %}
+                <div class="history-notes">
+                    <strong>Notes:</strong> {{ entry.notes }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="pagination">
+            <span class="pagination-info">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            <div class="pagination-controls">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if active_filters.event_type %}&event_type={{ active_filters.event_type }}{% endif %}{% if active_filters.user %}&user={{ active_filters.user }}{% endif %}{% if active_filters.date_from %}&date_from={{ active_filters.date_from }}{% endif %}{% if active_filters.date_to %}&date_to={{ active_filters.date_to }}{% endif %}" class="btn btn-sm btn-secondary">First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if active_filters.event_type %}&event_type={{ active_filters.event_type }}{% endif %}{% if active_filters.user %}&user={{ active_filters.user }}{% endif %}{% if active_filters.date_from %}&date_from={{ active_filters.date_from }}{% endif %}{% if active_filters.date_to %}&date_to={{ active_filters.date_to }}{% endif %}" class="btn btn-sm btn-secondary">Previous</a>
+                {% endif %}
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if active_filters.event_type %}&event_type={{ active_filters.event_type }}{% endif %}{% if active_filters.user %}&user={{ active_filters.user }}{% endif %}{% if active_filters.date_from %}&date_from={{ active_filters.date_from }}{% endif %}{% if active_filters.date_to %}&date_to={{ active_filters.date_to }}{% endif %}" class="btn btn-sm btn-secondary">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if active_filters.event_type %}&event_type={{ active_filters.event_type }}{% endif %}{% if active_filters.user %}&user={{ active_filters.user }}{% endif %}{% if active_filters.date_from %}&date_from={{ active_filters.date_from }}{% endif %}{% if active_filters.date_to %}&date_to={{ active_filters.date_to }}{% endif %}" class="btn btn-sm btn-secondary">Last</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="no-history">
+            <p>No history entries found for this asset.</p>
+            {% if active_filters.event_type or active_filters.user or active_filters.date_from or active_filters.date_to %}
+            <p class="text-muted">Try clearing the filters to see all history.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.history-timeline {
+    margin-top: 20px;
+}
+
+.history-entry {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.history-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.event-badge {
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.event-created { background-color: #28a745; color: white; }
+.event-updated { background-color: #007bff; color: white; }
+.event-freed { background-color: #ffc107; color: black; }
+.event-scrapped { background-color: #dc3545; color: white; }
+.event-reassigned { background-color: #17a2b8; color: white; }
+.event-health_status_updated { background-color: #6c757d; color: white; }
+
+.history-timestamp {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.history-user {
+    color: #666;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+.changes-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.changes-table th {
+    background-color: #f8f9fa;
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.changes-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+.old-value {
+    color: #dc3545;
+    text-decoration: line-through;
+}
+
+.new-value {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.history-notes {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+}
+
+.no-history {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.filter-badge {
+    background-color: #007bff;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85em;
+}
+
+.filter-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.filter-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+}
+</style>
+
+{% endblock %}

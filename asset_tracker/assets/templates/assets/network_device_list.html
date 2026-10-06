@@ -1,0 +1,86 @@
+{% extends "assets/base.html" %}
+
+{% block title %}Network Devices - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>Network Devices</h1>
+    <div>
+        <a href="{% url 'network_device_create' %}" class="btn btn-primary">Add New Device</a>
+        <a href="{% url 'export_network_devices' %}" class="btn btn-success">Export to Excel</a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Filter Form Section -->
+<div class="filter-section">
+    <form method="get" action="{% url 'network_device_list' %}" class="filter-form">
+        <div class="filter-header">
+            <h3>Filter Network Devices</h3>
+            {% if filter_form.device_name.value or filter_form.ip_address.value %}
+            <span class="filter-badge">
+                Filters Active
+            </span>
+            {% endif %}
+        </div>
+        
+        <div class="filter-fields">
+            <div class="filter-field">
+                <label for="{{ filter_form.device_name.id_for_label }}">{{ filter_form.device_name.label }}</label>
+                {{ filter_form.device_name }}
+            </div>
+            
+            <div class="filter-field">
+                <label for="{{ filter_form.ip_address.id_for_label }}">{{ filter_form.ip_address.label }}</label>
+                {{ filter_form.ip_address }}
+            </div>
+        </div>
+        
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="{% url 'network_device_list' %}" class="btn btn-secondary">Clear Filters</a>
+        </div>
+    </form>
+</div>
+
+{% if devices %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Device Type</th>
+            <th>Device Name</th>
+            <th>IP Address</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for device in devices %}
+        <tr>
+            <td>{{ device.device_type }}</td>
+            <td>{{ device.device_name }}</td>
+            <td>{{ device.get_ip_address }}</td>
+            <td>
+                <a href="{% url 'network_device_update' device.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{% url 'network_device_delete' device.pk %}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">
+    {% if filter_form.device_name.value or filter_form.ip_address.value %}
+    <p>No network devices found matching the selected filters.</p>
+    {% else %}
+    <p>No network devices found. <a href="{% url 'network_device_create' %}">Add your first device</a></p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

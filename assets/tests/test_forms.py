@@ -736,3 +736,711 @@ class TestScrappingReasonValidation(TestCase):
 
         self.assertEqual(scrapped.status, 'scrapped')
         self.assertEqual(scrapped.scrapping_reason, 'Hardware failure - motherboard damaged')
+
+
+@pytest.mark.django_db
+class TestAssetFormPrimaryIPTypeSelection(TestCase):
+    """Test cases for AssetForm primary IP type selection updates.
+    
+    Task 6.1: Unit tests for AssetForm updates
+    - Test form detects managed primary IP on edit
+    - Test form detects manual primary IP on edit
+    - Test save() creates AssetIPAddress with is_primary=True
+    - Test save() marks managed IP as assigned
+    - Test save() replaces old primary IP when updating
+    
+    Requirements: 1.2, 1.3, 1.6, 8.1, 8.3
+    """
+    
+    def setUp(self):
+        """Set up test data."""
+        from assets.models import Branch
+        
+        # Create operating system
+        self.os = OperatingSystem.objects.create(name="Windows 10 IP Test")
+        
+        # Create branch
+        self.branch = Branch.objects.create(name="Test Branch", is_active=True)
+        
+        # Create IP range and IP addresses
+        self.ip_range = IPRange.objects.create(
+            range_pattern="192.168.10.x",
+            network_prefix="192.168.10"
+        )
+        self.ip_address1 = IPAddress.objects.create(
+            address="192.168.10.100",
+            ip_range=self.ip_range,
+            is_assigned=False
+        )
+        self.ip_address2 = IPAddress.objects.create(
+            address="192.168.10.101",
+            ip_range=self.ip_range,
+            is_assigned=False
+        )
+    
+    def test_form_has_primary_ip_type_field(self):
+        """Test that form includes primary_ip_type field."""
+        form = AssetForm()
+        self.assertIn('primary_ip_type', form.fields)
+        self.assertEqual(form.fields['primary_ip_type'].initial, 'managed')
+    
+    def test_form_detects_managed_primary_ip_on_edit(self):
+        """Test form detects managed primary IP on edit and pre-selects 'managed' type."""
+        from assets.models import AssetIPAddress
+        
+        # Create asset with managed primary IP
+        asset = Asset.objects.create(
+            asset_tag='BIDC_IP001',
+            system_type='Desktop',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        # Create managed primary IP association
+        self.ip_address1.is_assigned = True
+        self.ip_address1.assigned_to_asset = asset
+        self.ip_address1.save()
+        
+        AssetIPAddress.objects.create(
+            asset=asset,
+            ip_address=self.ip_address1,
+            manual_ip=None,
+            is_primary=True
+        )
+        
+        # Create form with asset instance
+        form = AssetForm(instance=asset)
+        
+        # Verify IP type is detected as managed
+        self.assertEqual(form.fields['primary_ip_type'].initial, 'managed')
+        # Verify initial value is set to IP's PK, not the object
+        self.assertEqual(form.fields['ip_address'].initial, self.ip_address1.pk)
+        # Verify the IP is included in the choices dropdown
+        ip_choices = [choice[0] for choice in form.fields['ip_address'].choices]
+        self.assertIn(self.ip_address1.pk, ip_choices)
+    
+    def test_form_detects_manual_primary_ip_on_edit(self):
+        """Test form detects manual primary IP on edit and pre-selects 'manual' type."""
+        from assets.models import AssetIPAddress
+        
+        # Create asset with manual primary IP
+        asset = Asset.objects.create(
+            asset_tag='BIDC_IP002',
+            system_type='Desktop',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        # Create manual primary IP association
+        AssetIPAddress.objects.create(
+            asset=asset,
+            ip_address=None,
+            manual_ip='192.168.20.50',
+            is_primary=True
+        )
+        
+        # Create form with asset instance
+        form = AssetForm(instance=asset)
+        
+        # Verify IP type is detected as manual
+        self.assertEqual(form.fields['primary_ip_type'].initial, 'manual')
+        self.assertEqual(form.fields['manual_ip'].initial, '192.168.20.50')
+    
+    def test_save_creates_asset_ip_address_with_managed_ip(self):
+        """Test save() creates AssetIPAddress with is_primary=True for managed IP."""
+        from assets.models import AssetIPAddress
+        
+        # Create form data with managed IP
+        form_data = {
+            'asset_tag': 'BIDC_IP003',
+            'system_type': 'Desktop',
+            'operating_system': self.os.id,
+            'branch': self.branch.id,
+            'primary_ip_type': 'managed',
+            'ip_address': self.ip_address1.id,
+        }
+        
+        form = AssetForm(data=form_data)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save the asset
+        asset = form.save()
+        
+        # Verify AssetIPAddress was created
+        asset_ip = AssetIPAddress.objects.filter(asset=asset, is_primary=True).first()
+        self.assertIsNotNone(asset_ip)
+        self.assertEqual(asset_ip.ip_address, self.ip_address1)
+        self.assertIsNone(asset_ip.manual_ip)
+        self.assertTrue(asset_ip.is_primary)
+    
+    def test_save_creates_asset_ip_address_with_manual_ip(self):
+        """Test save() creates AssetIPAddress with is_primary=True for manual IP."""
+        from assets.models import AssetIPAddress
+        
+        # Create form data with manual IP
+        form_data = {
+            'asset_tag': 'BIDC_IP004',
+            'system_type': 'Desktop',
+            'operating_system': self.os.id,
+            'branch': self.branch.id,
+            'primary_ip_type': 'manual',
+            'manual_ip': '10.0.0.25',
+        }
+        
+        form = AssetForm(data=form_data)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save the asset
+        asset = form.save()
+        
+        # Verify AssetIPAddress was created
+        asset_ip = AssetIPAddress.objects.filter(asset=asset, is_primary=True).first()
+        self.assertIsNotNone(asset_ip)
+        self.assertIsNone(asset_ip.ip_address)
+        self.assertEqual(asset_ip.manual_ip, '10.0.0.25')
+        self.assertTrue(asset_ip.is_primary)
+    
+    def test_save_marks_managed_ip_as_assigned(self):
+        """Test save() marks managed IP as assigned."""
+        from assets.models import AssetIPAddress
+        
+        # Verify IP starts as unassigned
+        self.assertFalse(self.ip_address1.is_assigned)
+        
+        # Create form data with managed IP
+        form_data = {
+            'asset_tag': 'BIDC_IP005',
+            'system_type': 'Desktop',
+            'operating_system': self.os.id,
+            'branch': self.branch.id,
+            'primary_ip_type': 'managed',
+            'ip_address': self.ip_address1.id,
+        }
+        
+        form = AssetForm(data=form_data)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save the asset
+        asset = form.save()
+        
+        # Refresh IP from database
+        self.ip_address1.refresh_from_db()
+        
+        # Verify IP is now marked as assigned
+        self.assertTrue(self.ip_address1.is_assigned)
+        self.assertEqual(self.ip_address1.assigned_to_asset, asset)
+    
+    def test_save_replaces_old_primary_ip_when_updating(self):
+        """Test save() replaces old primary IP when updating asset."""
+        from assets.models import AssetIPAddress
+        
+        # Create asset with initial managed primary IP
+        asset = Asset.objects.create(
+            asset_tag='BIDC_IP006',
+            system_type='Desktop',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        # Create initial primary IP association
+        old_primary = AssetIPAddress.objects.create(
+            asset=asset,
+            ip_address=self.ip_address1,
+            manual_ip=None,
+            is_primary=True
+        )
+        self.ip_address1.is_assigned = True
+        self.ip_address1.assigned_to_asset = asset
+        self.ip_address1.save()
+        
+        # Update asset with new managed IP
+        form_data = {
+            'asset_tag': 'BIDC_IP006',
+            'system_type': 'Desktop',
+            'operating_system': self.os.id,
+            'branch': self.branch.id,
+            'primary_ip_type': 'managed',
+            'ip_address': self.ip_address2.id,
+        }
+        
+        form = AssetForm(data=form_data, instance=asset)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save the updated asset
+        asset = form.save()
+        
+        # Verify old primary IP was removed
+        self.assertFalse(AssetIPAddress.objects.filter(id=old_primary.id).exists())
+        
+        # Verify old IP is now unassigned
+        self.ip_address1.refresh_from_db()
+        self.assertFalse(self.ip_address1.is_assigned)
+        self.assertIsNone(self.ip_address1.assigned_to_asset)
+        
+        # Verify new primary IP was created
+        new_primary = AssetIPAddress.objects.filter(asset=asset, is_primary=True).first()
+        self.assertIsNotNone(new_primary)
+        self.assertEqual(new_primary.ip_address, self.ip_address2)
+        
+        # Verify new IP is marked as assigned
+        self.ip_address2.refresh_from_db()
+        self.assertTrue(self.ip_address2.is_assigned)
+        self.assertEqual(self.ip_address2.assigned_to_asset, asset)
+    
+    def test_save_replaces_managed_with_manual_ip(self):
+        """Test save() replaces managed primary IP with manual IP."""
+        from assets.models import AssetIPAddress
+        
+        # Create asset with managed primary IP
+        asset = Asset.objects.create(
+            asset_tag='BIDC_IP007',
+            system_type='Desktop',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        # Create managed primary IP association
+        old_primary = AssetIPAddress.objects.create(
+            asset=asset,
+            ip_address=self.ip_address1,
+            manual_ip=None,
+            is_primary=True
+        )
+        self.ip_address1.is_assigned = True
+        self.ip_address1.assigned_to_asset = asset
+        self.ip_address1.save()
+        
+        # Update asset with manual IP
+        form_data = {
+            'asset_tag': 'BIDC_IP007',
+            'system_type': 'Desktop',
+            'operating_system': self.os.id,
+            'branch': self.branch.id,
+            'primary_ip_type': 'manual',
+            'manual_ip': '172.16.0.50',
+        }
+        
+        form = AssetForm(data=form_data, instance=asset)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save the updated asset
+        asset = form.save()
+        
+        # Verify old primary IP was removed
+        self.assertFalse(AssetIPAddress.objects.filter(id=old_primary.id).exists())
+        
+        # Verify old managed IP is now unassigned
+        self.ip_address1.refresh_from_db()
+        self.assertFalse(self.ip_address1.is_assigned)
+        self.assertIsNone(self.ip_address1.assigned_to_asset)
+        
+        # Verify new manual primary IP was created
+        new_primary = AssetIPAddress.objects.filter(asset=asset, is_primary=True).first()
+        self.assertIsNotNone(new_primary)
+        self.assertIsNone(new_primary.ip_address)
+        self.assertEqual(new_primary.manual_ip, '172.16.0.50')
+    
+    def test_save_replaces_manual_with_managed_ip(self):
+        """Test save() replaces manual primary IP with managed IP."""
+        from assets.models import AssetIPAddress
+        
+        # Create asset with manual primary IP
+        asset = Asset.objects.create(
+            asset_tag='BIDC_IP008',
+            system_type='Desktop',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        # Create manual primary IP association
+        old_primary = AssetIPAddress.objects.create(
+            asset=asset,
+            ip_address=None,
+            manual_ip='10.0.0.100',
+            is_primary=True
+        )
+        
+        # Update asset with managed IP
+        form_data = {
+            'asset_tag': 'BIDC_IP008',
+            'system_type': 'Desktop',
+            'operating_system': self.os.id,
+            'branch': self.branch.id,
+            'primary_ip_type': 'managed',
+            'ip_address': self.ip_address1.id,
+        }
+        
+        form = AssetForm(data=form_data, instance=asset)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save the updated asset
+        asset = form.save()
+        
+        # Verify old primary IP was removed
+        self.assertFalse(AssetIPAddress.objects.filter(id=old_primary.id).exists())
+        
+        # Verify new managed primary IP was created
+        new_primary = AssetIPAddress.objects.filter(asset=asset, is_primary=True).first()
+        self.assertIsNotNone(new_primary)
+        self.assertEqual(new_primary.ip_address, self.ip_address1)
+        self.assertIsNone(new_primary.manual_ip)
+        
+        # Verify managed IP is marked as assigned
+        self.ip_address1.refresh_from_db()
+        self.assertTrue(self.ip_address1.is_assigned)
+        self.assertEqual(self.ip_address1.assigned_to_asset, asset)
+    
+    def test_save_keeps_same_managed_ip_when_not_changed(self):
+        """Test save() keeps the same primary IP when not changed."""
+        from assets.models import AssetIPAddress
+        
+        # Create asset with managed primary IP
+        asset = Asset.objects.create(
+            asset_tag='BIDC_IP009',
+            system_type='Desktop',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        # Create managed primary IP association
+        primary = AssetIPAddress.objects.create(
+            asset=asset,
+            ip_address=self.ip_address1,
+            manual_ip=None,
+            is_primary=True
+        )
+        self.ip_address1.is_assigned = True
+        self.ip_address1.assigned_to_asset = asset
+        self.ip_address1.save()
+        
+        # Update asset with same managed IP
+        form_data = {
+            'asset_tag': 'BIDC_IP009',
+            'system_type': 'Laptop',  # Changed system type but not IP
+            'hardware_serial_number': 'SN12345',
+            'operating_system': self.os.id,
+            'branch': self.branch.id,
+            'primary_ip_type': 'managed',
+            'ip_address': self.ip_address1.id,
+        }
+        
+        form = AssetForm(data=form_data, instance=asset)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save the updated asset
+        asset = form.save()
+        
+        # Verify primary IP still exists (not deleted and recreated)
+        primary.refresh_from_db()
+        self.assertTrue(primary.is_primary)
+        self.assertEqual(primary.ip_address, self.ip_address1)
+        
+        # Verify only one primary IP exists
+        primary_count = AssetIPAddress.objects.filter(asset=asset, is_primary=True).count()
+        self.assertEqual(primary_count, 1)
+        
+        # Verify IP is still assigned
+        self.ip_address1.refresh_from_db()
+        self.assertTrue(self.ip_address1.is_assigned)
+    
+    def test_save_keeps_same_manual_ip_when_not_changed(self):
+        """Test save() keeps the same manual primary IP when not changed."""
+        from assets.models import AssetIPAddress
+        
+        # Create asset with manual primary IP
+        asset = Asset.objects.create(
+            asset_tag='BIDC_IP010',
+            system_type='Desktop',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        # Create manual primary IP association
+        primary = AssetIPAddress.objects.create(
+            asset=asset,
+            ip_address=None,
+            manual_ip='192.168.30.75',
+            is_primary=True
+        )
+        
+        # Update asset with same manual IP
+        form_data = {
+            'asset_tag': 'BIDC_IP010',
+            'system_type': 'All-in-One PC',  # Changed system type but not IP
+            'hardware_serial_number': 'SN67890',
+            'operating_system': self.os.id,
+            'branch': self.branch.id,
+            'primary_ip_type': 'manual',
+            'manual_ip': '192.168.30.75',
+        }
+        
+        form = AssetForm(data=form_data, instance=asset)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        
+        # Save the updated asset
+        asset = form.save()
+        
+        # Verify primary IP still exists (not deleted and recreated)
+        primary.refresh_from_db()
+        self.assertTrue(primary.is_primary)
+        self.assertEqual(primary.manual_ip, '192.168.30.75')
+        
+        # Verify only one primary IP exists
+        primary_count = AssetIPAddress.objects.filter(asset=asset, is_primary=True).count()
+        self.assertEqual(primary_count, 1)
+
+
+@pytest.mark.django_db
+class TestAdditionalIPFormSetDuplicateValidation(TestCase):
+    """Test cases for AdditionalIPFormSet duplicate IP validation.
+    
+    Task 15.1: Unit tests for duplicate IP validation
+    - Test that duplicate manual IPs within formset are rejected
+    - Test that duplicate managed IPs within formset are rejected
+    - Test that additional IP matching primary IP is rejected
+    - Test that same IP on different assets is allowed
+    
+    Requirements: 1.6.1, 1.6.2, 1.6.3
+    """
+    
+    def setUp(self):
+        """Set up test data."""
+        from assets.models import Branch
+        from assets.forms import AdditionalIPFormSet
+        
+        # Create operating system
+        self.os = OperatingSystem.objects.create(name="Windows 10 Dup Test")
+        
+        # Create branch
+        self.branch = Branch.objects.create(name="Test Branch Dup", is_active=True)
+        
+        # Create IP range and IP addresses
+        self.ip_range = IPRange.objects.create(
+            range_pattern="192.168.10.x",
+            network_prefix="192.168.10"
+        )
+        self.ip_address1 = IPAddress.objects.create(
+            address="192.168.10.200",
+            ip_range=self.ip_range,
+            is_assigned=False
+        )
+        self.ip_address2 = IPAddress.objects.create(
+            address="192.168.10.201",
+            ip_range=self.ip_range,
+            is_assigned=False
+        )
+        
+        # Create test asset
+        self.asset = Asset.objects.create(
+            asset_tag='BIDC_DUP001',
+            system_type='Desktop',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        self.AdditionalIPFormSet = AdditionalIPFormSet
+    
+    def test_formset_rejects_duplicate_manual_ips(self):
+        """Test that duplicate manual IPs within the formset are rejected."""
+        formset_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '2',
+            'asset_ip_addresses-INITIAL_FORMS': '0',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-ip_type': 'manual',
+            'asset_ip_addresses-0-ip_label': 'WiFi',
+            'asset_ip_addresses-0-manual_ip': '192.168.50.100',
+            'asset_ip_addresses-1-ip_type': 'manual',
+            'asset_ip_addresses-1-ip_label': 'Mobile',
+            'asset_ip_addresses-1-manual_ip': '192.168.50.100',  # Duplicate!
+        }
+        
+        formset = self.AdditionalIPFormSet(data=formset_data, instance=self.asset)
+        self.assertFalse(formset.is_valid())
+        self.assertIn('This IP is already assigned to this asset', str(formset.non_form_errors()))
+    
+    def test_formset_rejects_duplicate_managed_ips(self):
+        """Test that duplicate managed IPs within the formset are rejected."""
+        formset_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '2',
+            'asset_ip_addresses-INITIAL_FORMS': '0',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-ip_type': 'managed',
+            'asset_ip_addresses-0-ip_label': 'WiFi',
+            'asset_ip_addresses-0-ip_address': self.ip_address1.id,
+            'asset_ip_addresses-1-ip_type': 'managed',
+            'asset_ip_addresses-1-ip_label': 'VPN',
+            'asset_ip_addresses-1-ip_address': self.ip_address1.id,  # Duplicate!
+        }
+        
+        formset = self.AdditionalIPFormSet(data=formset_data, instance=self.asset)
+        self.assertFalse(formset.is_valid())
+        self.assertIn('This IP is already assigned to this asset', str(formset.non_form_errors()))
+    
+    def test_formset_rejects_additional_ip_matching_primary_managed_ip(self):
+        """Test that additional IP matching the primary managed IP is rejected."""
+        from assets.models import AssetIPAddress
+        
+        # Create primary managed IP
+        AssetIPAddress.objects.create(
+            asset=self.asset,
+            ip_address=self.ip_address1,
+            manual_ip=None,
+            is_primary=True
+        )
+        self.ip_address1.is_assigned = True
+        self.ip_address1.assigned_to_asset = self.asset
+        self.ip_address1.save()
+        
+        # Try to add additional IP with same address as primary
+        formset_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '1',
+            'asset_ip_addresses-INITIAL_FORMS': '0',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-ip_type': 'manual',
+            'asset_ip_addresses-0-ip_label': 'WiFi',
+            'asset_ip_addresses-0-manual_ip': '192.168.10.200',  # Matches primary IP
+        }
+        
+        formset = self.AdditionalIPFormSet(data=formset_data, instance=self.asset)
+        self.assertFalse(formset.is_valid())
+        self.assertIn('This IP is already assigned to this asset', str(formset.non_form_errors()))
+    
+    def test_formset_rejects_additional_ip_matching_primary_manual_ip(self):
+        """Test that additional IP matching the primary manual IP is rejected."""
+        from assets.models import AssetIPAddress
+        
+        # Create primary manual IP
+        AssetIPAddress.objects.create(
+            asset=self.asset,
+            ip_address=None,
+            manual_ip='10.0.0.50',
+            is_primary=True
+        )
+        
+        # Try to add additional IP with same address as primary
+        formset_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '1',
+            'asset_ip_addresses-INITIAL_FORMS': '0',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-ip_type': 'manual',
+            'asset_ip_addresses-0-ip_label': 'Backup',
+            'asset_ip_addresses-0-manual_ip': '10.0.0.50',  # Matches primary IP
+        }
+        
+        formset = self.AdditionalIPFormSet(data=formset_data, instance=self.asset)
+        self.assertFalse(formset.is_valid())
+        self.assertIn('This IP is already assigned to this asset', str(formset.non_form_errors()))
+    
+    def test_formset_accepts_unique_ips(self):
+        """Test that formset accepts unique IPs across all forms."""
+        formset_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '2',
+            'asset_ip_addresses-INITIAL_FORMS': '0',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-ip_type': 'manual',
+            'asset_ip_addresses-0-ip_label': 'WiFi',
+            'asset_ip_addresses-0-manual_ip': '192.168.50.100',
+            'asset_ip_addresses-1-ip_type': 'managed',
+            'asset_ip_addresses-1-ip_label': 'VPN',
+            'asset_ip_addresses-1-ip_address': self.ip_address1.id,
+        }
+        
+        formset = self.AdditionalIPFormSet(data=formset_data, instance=self.asset)
+        self.assertTrue(formset.is_valid(), f"Formset errors: {formset.errors}, Non-form errors: {formset.non_form_errors()}")
+    
+    def test_formset_allows_same_manual_ip_on_different_assets(self):
+        """Test that formset allows the same manual IP on different assets (requirement 1.6.4)."""
+        # Create second asset
+        asset2 = Asset.objects.create(
+            asset_tag='BIDC_DUP002',
+            system_type='Laptop',
+            hardware_serial_number='SN123456',
+            operating_system=self.os,
+            branch=self.branch
+        )
+        
+        # Add manual IP to first asset
+        formset1_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '1',
+            'asset_ip_addresses-INITIAL_FORMS': '0',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-ip_type': 'manual',
+            'asset_ip_addresses-0-ip_label': 'WiFi',
+            'asset_ip_addresses-0-manual_ip': '172.16.0.99',
+        }
+        
+        formset1 = self.AdditionalIPFormSet(data=formset1_data, instance=self.asset)
+        self.assertTrue(formset1.is_valid(), f"Formset1 errors: {formset1.errors}")
+        formset1.save()
+        
+        # Add same manual IP to second asset - should be allowed
+        formset2_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '1',
+            'asset_ip_addresses-INITIAL_FORMS': '0',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-ip_type': 'manual',
+            'asset_ip_addresses-0-ip_label': 'LAN',
+            'asset_ip_addresses-0-manual_ip': '172.16.0.99',  # Same IP, different asset
+        }
+        
+        formset2 = self.AdditionalIPFormSet(data=formset2_data, instance=asset2)
+        self.assertTrue(formset2.is_valid(), f"Formset2 errors: {formset2.errors}, Non-form errors: {formset2.non_form_errors()}")
+    
+    def test_formset_skips_forms_marked_for_deletion(self):
+        """Test that forms marked for deletion are not validated for duplicates."""
+        from assets.models import AssetIPAddress
+        
+        # Create existing additional IP
+        existing_ip = AssetIPAddress.objects.create(
+            asset=self.asset,
+            ip_address=None,
+            manual_ip='192.168.60.50',
+            is_primary=False,
+            ip_label='Old WiFi'
+        )
+        
+        # Submit formset with one form marked for deletion and one new form with same IP
+        formset_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '2',
+            'asset_ip_addresses-INITIAL_FORMS': '1',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-id': existing_ip.id,
+            'asset_ip_addresses-0-ip_type': 'manual',
+            'asset_ip_addresses-0-ip_label': 'Old WiFi',
+            'asset_ip_addresses-0-manual_ip': '192.168.60.50',
+            'asset_ip_addresses-0-DELETE': 'on',  # Marked for deletion
+            'asset_ip_addresses-1-ip_type': 'manual',
+            'asset_ip_addresses-1-ip_label': 'New WiFi',
+            'asset_ip_addresses-1-manual_ip': '192.168.60.50',  # Same IP as deleted form
+        }
+        
+        formset = self.AdditionalIPFormSet(data=formset_data, instance=self.asset)
+        # Should be valid because first form is marked for deletion
+        self.assertTrue(formset.is_valid(), f"Formset errors: {formset.errors}, Non-form errors: {formset.non_form_errors()}")
+    
+    def test_formset_rejects_mixed_managed_and_manual_duplicate(self):
+        """Test that duplicate IP is rejected even when one is managed and one is manual."""
+        formset_data = {
+            'asset_ip_addresses-TOTAL_FORMS': '2',
+            'asset_ip_addresses-INITIAL_FORMS': '0',
+            'asset_ip_addresses-MIN_NUM_FORMS': '0',
+            'asset_ip_addresses-MAX_NUM_FORMS': '10',
+            'asset_ip_addresses-0-ip_type': 'managed',
+            'asset_ip_addresses-0-ip_label': 'LAN',
+            'asset_ip_addresses-0-ip_address': self.ip_address1.id,  # 192.168.10.200
+            'asset_ip_addresses-1-ip_type': 'manual',
+            'asset_ip_addresses-1-ip_label': 'WiFi',
+            'asset_ip_addresses-1-manual_ip': '192.168.10.200',  # Same as managed IP
+        }
+        
+        formset = self.AdditionalIPFormSet(data=formset_data, instance=self.asset)
+        self.assertFalse(formset.is_valid())
+        self.assertIn('This IP is already assigned to this asset', str(formset.non_form_errors()))

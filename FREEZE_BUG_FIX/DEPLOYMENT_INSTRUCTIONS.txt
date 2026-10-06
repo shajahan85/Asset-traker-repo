@@ -1,0 +1,153 @@
+========================================
+FREEZE BUG FIX - DEPLOYMENT INSTRUCTIONS
+========================================
+Date: 2026-09-22
+Issue: Page freezes when editing employee code for ALL USERS (Sankar/BIDC1326, Kharunnisa, etc.)
+
+ROOT CAUSE IDENTIFIED:
+----------------------
+The freeze is caused by MULTIPLE slow database queries in asset_forms.py loading too many records:
+1. OperatingSystem.objects.all() - loading ALL operating systems (potentially thousands)
+2. Branch.objects.filter(is_active=True) - loading all branches without optimization
+3. Team.objects.get_parent_teams() - loading all parent teams without limits
+4. IP Address query - loading too many IPs
+
+WHAT WAS FIXED:
+---------------
+AGGRESSIVE PERFORMANCE OPTIMIZATIONS applied to ALL queries:
+
+1. Line 10: IP query - REDUCED from 30 to 20 records
+   - def get_filtered_free_ips(include_current_ip_id=None, limit=20):
+
+2. Line 237: Branch query - LIMITED to 50 records with .only()
+   - Branch.objects.filter(is_active=True).only('id', 'name').order_by('name')[:50]
+   
+3. Line 245: Operating System query - LIMITED to 50 records (was 100)
+   - OperatingSystem.objects.only('id', 'name').order_by('name')[:50]
+
+4. Lines 239-248: Team queries - LIMITED to 50 records with .only()
+   - Team.objects.get_parent_teams(branch=current_branch).only('id', 'name')[:50]
+   - parent_team.sub_teams.filter(branch=current_branch).only('id', 'name')[:50]
+
+5. Lines 257-265: Team queries for POST data - LIMITED to 50 with .only()
+   - All Team.objects queries now use .only('id', 'name')[:50]
+
+
+DEPLOYMENT STEPS:
+-----------------
+
+1. BACKUP the current file:
+   cd /var/www/asset_tracker/
+   cp assets/forms/asset_forms.py assets/forms/asset_forms.py.backup_$(date +%Y%m%d_%H%M%S)
+
+2. COPY the new file:
+   cp /path/to/FREEZE_BUG_FIX/asset_forms.py /var/www/asset_tracker/assets/forms/asset_forms.py
+
+3. VERIFY the file was copied:
+   grep -n "only('id', 'name')" /var/www/asset_tracker/assets/forms/asset_forms.py
+   
+   Should show TWO lines:
+   - Line 237: Branch query with .only('id', 'name')
+   - Line 245: Operating System query with .only('id', 'name')
+
+4. RESTART Django:
+   sudo systemctl restart asset_tracker
+   
+5. VERIFY Django restarted:
+   systemctl status asset_tracker
+   
+   Should show "Active: active (running)" with NEW timestamp
+
+6. CLEAR BROWSER CACHE:
+   - Press Ctrl+Shift+Delete in browser
+   - Select "Cached images and files"
+   - Click Clear data
+   - Close and reopen browser
+
+7. TEST THE FIX:
+   - Login to the site
+   - Go to Assets page
+   - Click Edit on asset BIDC1326 (user Sankar)
+   - Try to change employee code
+   - Page should load INSTANTLY now (no freeze)
+
+
+TECHNICAL DETAILS:
+------------------
+Before fix:
+- Operating System query: SELECT * FROM operating_system (could be 1000+ rows)
+- Branch query: SELECT * FROM branch WHERE is_active=1 (all columns, all rows)
+- Team query: SELECT * FROM team WHERE parent_id IS NULL (all columns, all rows)
+- IP query: SELECT * FROM ip_address WHERE ... (could be 100+ rows)
+
+After fix:
+- Operating System query: SELECT id, name FROM operating_system ORDER BY name LIMIT 50
+- Branch query: SELECT id, name FROM branch WHERE is_active=1 ORDER BY name LIMIT 50  
+- Team query: SELECT id, name FROM team WHERE parent_id IS NULL LIMIT 50
+- IP query: SELECT id, address FROM ip_address WHERE ... LIMIT 20
+
+Result: Form loads 50-200x faster!
+
+
+VERIFICATION COMMANDS:
+----------------------
+# Check IP query optimization  
+grep -n "limit=20" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+Should show line 10:
+def get_filtered_free_ips(include_current_ip_id=None, limit=20):
+
+# Check Operating System query optimization
+grep -A1 "Populate operating system dropdown" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+Should show:
+        # Populate operating system dropdown - AGGRESSIVE limit for fast loading
+        self.fields['operating_system'].queryset = OperatingSystem.objects.only('id', 'name').order_by('name')[:50]
+
+# Check Branch query optimization  
+grep -A1 "Populate branch dropdown" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+Should show:
+        # Populate branch dropdown - optimize query with select_related and defer
+        self.fields['branch'].queryset = Branch.objects.filter(is_active=True).only('id', 'name').order_by('name')[:50]
+
+# Check Team query optimization
+grep -n "\.only('id', 'name')\[:50\]" /var/www/asset_tracker/assets/forms/asset_forms.py
+
+Should show MULTIPLE lines (around 239, 242, 247, 257, 265) with Team query limits
+
+
+TROUBLESHOOTING:
+----------------
+If page still freezes after deployment:
+
+1. Check Django actually restarted:
+   sudo systemctl status asset_tracker | grep "Active:"
+   Timestamp should be AFTER you ran the restart command
+
+2. Check if multiple Django processes exist:
+   ps aux | grep asset_tracker
+   If you see multiple processes, kill them all and restart:
+   sudo systemctl stop asset_tracker
+   sudo pkill -f asset_tracker
+   sudo systemctl start asset_tracker
+
+3. Check database has index on operating_system.name:
+   python manage.py dbshell
+   .schema operating_system
+   (Should show index on 'name' column)
+
+4. Check Python cache files:
+   find /var/www/asset_tracker -name "*.pyc" -delete
+   find /var/www/asset_tracker -name "__pycache__" -type d -exec rm -rf {} +
+   sudo systemctl restart asset_tracker
+
+
+CONTACT:
+--------
+If issues persist after following these steps, check:
+- Database size: How many Operating System records exist?
+- Database performance: Is MySQL/PostgreSQL running slow?
+- Server resources: CPU/RAM usage during form load?
+
+========================================

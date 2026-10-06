@@ -1,0 +1,29 @@
+Files to Upload to Linux Server
+================================
+
+Upload these 11 files from deployment_package folder:
+
+PYTHON FILES (Backend - 5 files):
+---------------------------------
+1. assets/views.py
+2. assets/views_server_controller.py
+3. assets/forms/asset_forms.py
+4. assets/services/asset_service.py
+5. assets/services/notification_service.py
+
+HTML TEMPLATES (Frontend - 6 files):
+------------------------------------
+6. assets/templates/assets/asset_form.html
+7. assets/templates/assets/freed_systems.html
+8. assets/templates/assets/free_ips.html
+9. assets/templates/assets/server_controller_list.html
+10. assets/templates/assets/server_controller_form.html
+11. assets/templates/assets/server_controller_reassign.html
+
+AFTER COPYING:
+--------------
+1. Set permissions: sudo chown -R www-data:www-data /var/www/asset_tracker/assets
+2. Collect static: python manage.py collectstatic --noinput
+3. Restart service: sudo systemctl restart asset_tracker
+
+NO DATABASE CHANGES NEEDED!

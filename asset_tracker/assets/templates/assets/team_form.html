@@ -1,0 +1,208 @@
+{% extends "assets/base.html" %}
+
+{% block title %}{% if team %}Edit Team{% else %}Add New Team{% endif %} - Asset Tracker{% endblock %}
+
+{% block content %}
+<div class="header-actions">
+    <h1>{% if team %}Edit Team: {{ team.name }}{% else %}Add New Team{% endif %}</h1>
+    <div>
+        <a href="{% url 'team_management' %}" class="btn btn-secondary">← Back to Teams</a>
+    </div>
+</div>
+
+{% if messages %}
+<div class="messages">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="form-container">
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.name.id_for_label }}">{{ form.name.label }} <span class="required">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <div class="error-message">{{ form.name.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.branch.id_for_label }}">{{ form.branch.label }} <span class="required">*</span></label>
+            {{ form.branch }}
+            {% if form.branch.errors %}
+            <div class="error-message">{{ form.branch.errors }}</div>
+            {% endif %}
+            <small class="form-text">Select the branch this team belongs to</small>
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.parent.id_for_label }}">{{ form.parent.label }}</label>
+            {{ form.parent }}
+            {% if form.parent.errors %}
+            <div class="error-message">{{ form.parent.errors }}</div>
+            {% endif %}
+            <small class="form-text">Leave empty for a root-level team, or select a parent team to create a sub-team</small>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="error-message">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{% if team %}Update Team{% else %}Create Team{% endif %}</button>
+            <a href="{% url 'team_management' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.form-container {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.required {
+    color: #dc3545;
+}
+
+.form-group input[type="text"],
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-text {
+    display: block;
+    margin-top: 5px;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.error-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 5px;
+}
+
+.form-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.messages {
+    margin-bottom: 20px;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+</style>
+
+<script>
+// Filter parent teams by selected branch
+document.addEventListener('DOMContentLoaded', function() {
+    const branchSelect = document.getElementById('{{ form.branch.id_for_label }}');
+    const parentSelect = document.getElementById('{{ form.parent.id_for_label }}');
+    
+    if (branchSelect && parentSelect) {
+        // Store all parent options
+        const allOptions = Array.from(parentSelect.options);
+        
+        branchSelect.addEventListener('change', function() {
+            const selectedBranchId = this.value;
+            
+            // Clear parent select
+            parentSelect.innerHTML = '<option value="">---------</option>';
+            
+            if (selectedBranchId) {
+                // Fetch teams for selected branch
+                fetch(`/assets/api/teams-by-branch/${selectedBranchId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.teams.forEach(team => {
+                            const option = document.createElement('option');
+                            option.value = team.id;
+                            option.textContent = team.name;
+                            parentSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error fetching teams:', error));
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
